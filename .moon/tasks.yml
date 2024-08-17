@@ -3,9 +3,17 @@ $schema: 'https://moonrepo.dev/schemas/tasks.json'
 tasks:
   format:
     command: 'biome format .'
+    options:
+      runInCI: true
   lint:
     command: 'biome lint .'
+    options:
+      runInCI: true
   dev:
     command: 'bun run dev'
+    options:
+      runInCI: false
   test:
     command: 'bun test'
+    options:
+      runInCI: true
