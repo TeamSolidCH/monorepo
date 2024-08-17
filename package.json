@@ -1,16 +1,16 @@
 {
-  "name": "solid",
-  "module": "index.ts",
-  "type": "module",
-  "devDependencies": {
-    "@biomejs/biome": "1.8.2",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "license": "GPL-3.0-or-later",
-  "private": true,
-  "workspaces": ["packages/*", "apps/*"],
-  "trustedDependencies": ["@biomejs/biome"]
+	"name": "solid",
+	"module": "index.ts",
+	"type": "module",
+	"devDependencies": {
+		"@biomejs/biome": "1.8.2",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"license": "GPL-3.0-or-later",
+	"private": true,
+	"workspaces": ["packages/*", "apps/*"],
+	"trustedDependencies": ["@biomejs/biome"]
 }
