@@ -30,7 +30,7 @@ impl Data {
                 .parse::<u64>()?
                 .into(),
             bot_start_time: std::time::Instant::now(),
-            db: db_connection.into(),
+            db: db_connection,
         })
     }
 }

@@ -134,13 +134,11 @@ impl Discord {
             })
             .build();
 
-        let it = self.intents.clone();
-        let client = serenity::Client::builder(self.token.clone(), it)
+        let it = self.intents;
+        serenity::Client::builder(self.token.clone(), it)
             .framework(framework)
             .await
-            .expect("Failed to create client");
-
-        return client;
+            .expect("Failed to create client")
     }
 
     fn new_data_thread(
@@ -157,7 +155,7 @@ impl Discord {
 
                 let events = events_cache
                     .entry(event.calendar_id.clone())
-                    .or_insert(Vec::new());
+                    .or_default();
                 let matching = events
                     .iter()
                     .zip(event.new_events.iter())
@@ -190,7 +188,7 @@ impl Discord {
 
                 let mut create_new_message = false;
                 if let Entry::Occupied(o) = message_cache.entry(event.calendar_id.clone()) {
-                    let message_id = serenity::MessageId::new(o.get().clone());
+                    let message_id = serenity::MessageId::new(*o.get());
 
                     let err = cache
                         .client
@@ -202,12 +200,9 @@ impl Discord {
                         )
                         .await;
 
-                    match err {
-                        Err(e) => {
-                            error!("Failed to edit message ({}): {}", message_id.clone(), e);
-                            create_new_message = true;
-                        }
-                        _ => (),
+                    if let Err(e) = err {
+                        error!("Failed to edit message ({}): {}", message_id.clone(), e);
+                        create_new_message = true;
                     };
                 } else {
                     create_new_message = true;
@@ -241,7 +236,7 @@ impl Discord {
             let end_date = ele.clone().end.unwrap().date_time.unwrap();
             sorted
                 .entry((start_date.date_naive(), end_date.date_naive()))
-                .or_insert(Vec::new())
+                .or_default()
                 .push(ele);
         }
 
