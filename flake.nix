@@ -33,7 +33,6 @@
                   # https://devenv.sh/reference/options/
                   packages = with pkgs; [ 
 										moon
-                    biome
                     bun
                     nix-ld
 									];
