@@ -2,11 +2,11 @@ $schema: 'https://moonrepo.dev/schemas/tasks.json'
 
 tasks:
   format:
-    command: 'biome format .'
+    command: 'bun run biome format .'
     options:
       runInCI: true
   lint:
-    command: 'biome lint .'
+    command: 'bun run biome lint .'
     options:
       runInCI: true
   dev:
