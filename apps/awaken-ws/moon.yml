@@ -1,0 +1,6 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+platform: 'bun'
+type: 'application'
+dependsOn:
+  - 'awaken-library'

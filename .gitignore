@@ -1,2 +1,14 @@
+# Devenv
 .devenv
 .direnv
+
+# moon
+.moon/cache
+.moon/docker
+
+# Typescript
+lib/
+*.tsbuildinfo
+
+# Node
+node_modules/
