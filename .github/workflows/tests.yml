@@ -19,6 +19,8 @@ jobs:
         run: nix profile install nixpkgs#devenv
       - uses: HatsuneMiku3939/direnv-action@v1
       - uses: 'moonrepo/setup-toolchain@v0'
+        with:
+          moon-version: '1.22.10'
       - name: 'Run tests'
         run: 'moon ci :test'
       - name: 'Run lint'
