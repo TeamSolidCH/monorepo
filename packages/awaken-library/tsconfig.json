@@ -2,9 +2,12 @@
 	"extends": "../../tsconfig.options.json",
 	"compilerOptions": {
 		"emitDeclarationOnly": true,
-		"outDir": "./lib",
-		"rootDir": "./src"
+		"outDir": "../../.moon/cache/types/packages/awaken-library",
+		"rootDir": "./src",
+		"paths": {}
 	},
-	"include": ["src/**/*"],
+	"include": [
+		"src/**/*"
+	],
 	"references": []
 }

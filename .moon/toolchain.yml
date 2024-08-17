@@ -26,3 +26,7 @@ typescript:
 
 rust:
   version: '1.79.0'
+  components:
+    - 'rustfmt'
+    - 'clippy'
+    - 'rust-analyzer'

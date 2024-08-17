@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
@@ -33,12 +33,11 @@
                   # https://devenv.sh/reference/options/
                   packages = with pkgs; [ 
 										moon
-                    bun
                     nix-ld
-                    pkgs.openssl.dev
-                    pkgs.pkg-config
-                    pkgs.dbus.dev
-                    pkgs.postgresql
+                    openssl.dev
+                    pkg-config
+                    dbus.dev
+                    postgresql
 									];
 
                   env = {

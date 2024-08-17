@@ -1,5 +1,6 @@
 $schema: 'https://moonrepo.dev/schemas/moon.json'
 
+
 type: 'application'
 platform: 'bun'
 dependsOn:
