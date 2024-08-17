@@ -1,14 +1,14 @@
 {
-  "name": "@awaken/ws",
-  "type": "module",
-  "scripts": {
-    "dev": "bun run --hot src/index.ts"
-  },
-  "dependencies": {
-    "awaken-library": "workspace:*",
-    "hono": "^4.4.8"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  }
+	"name": "@awaken/ws",
+	"type": "module",
+	"scripts": {
+		"dev": "bun run --hot src/index.ts"
+	},
+	"dependencies": {
+		"awaken-library": "workspace:*",
+		"hono": "^4.4.8"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	}
 }

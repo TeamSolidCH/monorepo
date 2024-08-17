@@ -1,16 +1,8 @@
 {
-    "yaml.schemas": {
-        "https://moonrepo.dev/schemas/project.json": [
-            "apps/**/moon.yml"
-        ],
-        "https://moonrepo.dev/schemas/tasks.json": [
-            ".moon/tasks.yml"
-        ],
-        "https://moonrepo.dev/schemas/toolchain.json": [
-            ".moon/toolchain.yml"
-        ],
-        "https://moonrepo.dev/schemas/workspace.json": [
-            ".moon/workspace.yml"
-        ]
-    }
+	"yaml.schemas": {
+		"https://moonrepo.dev/schemas/project.json": ["apps/**/moon.yml"],
+		"https://moonrepo.dev/schemas/tasks.json": [".moon/tasks.yml"],
+		"https://moonrepo.dev/schemas/toolchain.json": [".moon/toolchain.yml"],
+		"https://moonrepo.dev/schemas/workspace.json": [".moon/workspace.yml"]
+	}
 }

@@ -1,10 +1,10 @@
 {
 	"extends": "../../tsconfig.options.json",
-  "compilerOptions": {
-    "emitDeclarationOnly": true,
-    "outDir": "./lib",
-    "rootDir": "./src",
-  },
-  "include": ["src/**/*"],
-  "references": [],
+	"compilerOptions": {
+		"emitDeclarationOnly": true,
+		"outDir": "./lib",
+		"rootDir": "./src"
+	},
+	"include": ["src/**/*"],
+	"references": []
 }

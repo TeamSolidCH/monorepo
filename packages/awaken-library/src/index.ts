@@ -1,4 +1,3 @@
-
 export function getIndexText(): string {
-    return "Hello Hono!";
+	return "Hello Hono!";
 }
