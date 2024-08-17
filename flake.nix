@@ -35,6 +35,10 @@
 										moon
                     bun
                     nix-ld
+                    pkgs.openssl.dev
+                    pkgs.pkg-config
+                    pkgs.dbus.dev
+                    pkgs.postgresql
 									];
 
                   env = {
@@ -42,13 +46,15 @@
                     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
                       pkgs.stdenv.cc.cc
                       pkgs.xz
+                      pkgs.postgresql
                     ];
                     NIX_LD = pkgs.lib.fileContents "${pkgs.stdenv.cc}/nix-support/dynamic-linker";
+                    OPENSSL_DEV=pkgs.openssl.dev;
                   };
-
-                    }
-                  ];
-                };
-            });
+                }
+              ];
+            };
+          }
+        );
     };
 }

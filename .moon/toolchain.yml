@@ -23,3 +23,6 @@ typescript:
   syncProjectReferencesToPaths: true
   includeProjectReferenceSources: true
   routeOutDirToCache: true
+
+rust:
+  version: '1.79.0'
