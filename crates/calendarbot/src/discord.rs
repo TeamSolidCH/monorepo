@@ -153,9 +153,7 @@ impl Discord {
             while let Some(event) = calendar_rx.recv().await {
                 debug!("Received event for calendar {}", event.calendar_id);
 
-                let events = events_cache
-                    .entry(event.calendar_id.clone())
-                    .or_default();
+                let events = events_cache.entry(event.calendar_id.clone()).or_default();
                 let matching = events
                     .iter()
                     .zip(event.new_events.iter())
