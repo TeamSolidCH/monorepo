@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "outDir": "../../.moon/cache/types/apps/awaken-api",
+    "paths": {
+      "awaken-library": [
+        "../../packages/awaken-library/src/index.ts"
+      ],
+      "awaken-library/*": [
+        "../../packages/awaken-library/src/*"
+      ]
+    }
+  },
+  "references": [
+    {
+      "path": "../../packages/awaken-library"
+    }
+  ],
+  "include": [
+    "../../packages/awaken-library/**/*",
+    "src/**/*"
+  ]
+}

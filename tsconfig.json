@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.options.json",
+  "files": [],
+  "references": [
+    {
+      "path": "apps/awaken-api"
+    },
+    {
+      "path": "apps/awaken-ws"
+    },
+    {
+      "path": "packages/awaken-library"
+    }
+  ]
+}

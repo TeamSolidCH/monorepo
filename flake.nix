@@ -33,11 +33,23 @@
                   # https://devenv.sh/reference/options/
                   packages = with pkgs; [ 
 										moon
+                    biome
+                    bun
+                    nix-ld
 									];
 
-                }
-              ];
-            };
-          });
+                  env = {
+                    # https://devenv.sh/reference/environment/
+                    NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+                      pkgs.stdenv.cc.cc
+                      pkgs.xz
+                    ];
+                    NIX_LD = pkgs.lib.fileContents "${pkgs.stdenv.cc}/nix-support/dynamic-linker";
+                  };
+
+                    }
+                  ];
+                };
+            });
     };
 }

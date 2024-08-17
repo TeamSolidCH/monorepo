@@ -1,0 +1,11 @@
+$schema: 'https://moonrepo.dev/schemas/tasks.json'
+
+tasks:
+  format:
+    command: 'biome format .'
+  lint:
+    command: 'biome lint .'
+  dev:
+    command: 'bun run dev'
+  test:
+    command: 'bun test'
