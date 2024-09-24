@@ -15,12 +15,10 @@ jobs:
       - uses: cachix/cachix-action@v14
         with:
           name: devenv
-      - name: Install devenv.sh
-        run: nix profile install nixpkgs#devenv
       - uses: HatsuneMiku3939/direnv-action@v1
       - name: 'Run tests'
-        run: 'devenv shell moon ci :test'
+        run: 'nix develop --impure --command bash -c "moon ci :tests #.'
       - name: 'Run lint'
-        run: 'devenv shell moon ci :lint'
+        run: 'nix develop --impure --command bash -c "moon ci :lint" #.'
       - name: 'Run format'
-        run: 'devenv shell moon ci :format'
+        run: 'nix develop --impure --command bash -c "moon ci :format" #.'
