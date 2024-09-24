@@ -17,7 +17,7 @@ jobs:
           name: devenv
       - uses: HatsuneMiku3939/direnv-action@v1
       - name: 'Run tests'
-        run: 'nix develop --impure --command bash -c "moon ci :tests #.'
+        run: 'nix develop --impure --command bash -c "moon ci :test" #.'
       - name: 'Run lint'
         run: 'nix develop --impure --command bash -c "moon ci :lint" #.'
       - name: 'Run format'
