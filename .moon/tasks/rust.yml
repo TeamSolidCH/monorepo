@@ -8,7 +8,7 @@ tasks:
     inputs:
       - '@globs(sources)'
   dev:
-    command: 'cargo run --workspace'
+    command: 'cargo run'
     options:
       runInCI: false
     inputs:
