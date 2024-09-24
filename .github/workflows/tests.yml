@@ -16,6 +16,8 @@ jobs:
         with:
           name: devenv
       - uses: HatsuneMiku3939/direnv-action@v1
+      - name: 'Install libc6'
+        run: 'apt update && apt install libc6'
       - name: 'Run tests'
         run: 'nix develop --impure --command bash -c "moon ci :test" #.'
       - name: 'Run lint'
