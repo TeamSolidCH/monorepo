@@ -38,6 +38,7 @@
                     pkg-config
                     dbus.dev
                     postgresql
+										glib
 									];
 
                   env = {
