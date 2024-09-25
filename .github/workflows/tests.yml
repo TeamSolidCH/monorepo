@@ -6,7 +6,7 @@ on:
 jobs:
   ci:
     name: 'CI'
-    runs-on: 'ubuntu-latest'
+    runs-on: 'ubuntu-24.04'
     steps:
       - uses: 'actions/checkout@v4'
         with:
@@ -15,8 +15,6 @@ jobs:
       - uses: cachix/cachix-action@v14
         with:
           name: devenv
-      - name: 'Upgrade glibc'
-        run: 'sudo apt-get install --only-upgrade glibc'
       - name: "ldd version"
         run: 'ldd --version'
       - name: 'Run tests'
