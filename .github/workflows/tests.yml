@@ -15,8 +15,6 @@ jobs:
       - uses: cachix/cachix-action@v14
         with:
           name: devenv
-      - name: 'Install libc6'
-        run: 'sudo apt update && sudo apt install libc6'
       - name: 'Run tests'
         run: 'nix develop --impure --command bash -c "moon ci :test" #.'
       - name: 'Run lint'
