@@ -7,6 +7,7 @@ jobs:
   ci:
     name: 'CI'
     runs-on: 'ubuntu-latest'
+    container: rust:1.79-alpine
     steps:
       - uses: 'actions/checkout@v4'
         with:
