@@ -7,7 +7,7 @@ jobs:
   ci:
     name: 'CI'
     runs-on: 'ubuntu-latest'
-    container: rust:1.79-bullseye
+    container: nixos/nix
     steps:
       - uses: 'actions/checkout@v4'
         with:
