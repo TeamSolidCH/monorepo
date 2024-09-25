@@ -38,7 +38,7 @@
                     pkg-config
                     dbus.dev
                     postgresql
-										libcxx.dev
+										diesel-cli
 									];
 
                   env = {
