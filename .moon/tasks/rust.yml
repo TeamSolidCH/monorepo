@@ -1,0 +1,49 @@
+$schema: 'https://moonrepo.dev/schemas/tasks.json'
+
+tasks:
+  build:
+    command: 'cargo build'
+    options:
+      runInCI: true
+    inputs:
+      - '@globs(sources)'
+  dev:
+    command: 'cargo run'
+    options:
+      runInCI: false
+    inputs:
+      - '@globs(sources)'
+  check:
+    command: 'cargo check --workspace'
+    options: 
+      runInCI: true
+    inputs:
+      - '@globs(sources)'
+  format:
+    command: 'cargo fmt --all --check'
+    options:
+      runInCI: true
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+  lint:
+    command: 'cargo clippy --workspace'
+    options:
+      runInCI: true
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+  test:
+    command: 'cargo test --workspace'
+    options:
+      runInCI: false
+    inputs:
+      - '@globs(sources)'
+      - '@globs(tests)'
+  buildRelease:
+    command: 'cargo build --release'
+    options:
+      runInCI: false
+    inputs:
+      - '@globs(sources)'
+    outputs: ['target/release/calendarbot']

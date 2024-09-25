@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
@@ -33,8 +33,12 @@
                   # https://devenv.sh/reference/options/
                   packages = with pkgs; [ 
 										moon
-                    bun
                     nix-ld
+                    openssl.dev
+                    pkg-config
+                    dbus.dev
+                    postgresql
+										libcxx.dev
 									];
 
                   env = {
@@ -42,13 +46,15 @@
                     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
                       pkgs.stdenv.cc.cc
                       pkgs.xz
+                      pkgs.postgresql
                     ];
                     NIX_LD = pkgs.lib.fileContents "${pkgs.stdenv.cc}/nix-support/dynamic-linker";
+                    OPENSSL_DEV=pkgs.openssl.dev;
                   };
-
-                    }
-                  ];
-                };
-            });
+                }
+              ];
+            };
+          }
+        );
     };
 }
