@@ -7,12 +7,16 @@ jobs:
   ci:
     name: 'CI'
     runs-on: 'ubuntu-latest'
-    container: nixos/nix
+    container: rust:1.79
     steps:
       - uses: 'actions/checkout@v4'
         with:
           fetch-depth: 0
-      - uses: cachix/install-nix-action@v26
+      - name: Install nix
+        run: | 
+          mkdir -p /etc/nix/
+          echo "build-users-group =" > /etc/nix/nix.conf
+          sh <(curl --retry 5 --retry-connrefused -L "${INPUT_INSTALL_URL:-https://nixos.org/nix/install}") --no-channel-add --darwin-use-unencrypted-nix-store-volume --nix-extra-conf-file /tmp/nix.conf
       - uses: cachix/cachix-action@v14
         with:
           name: devenv
