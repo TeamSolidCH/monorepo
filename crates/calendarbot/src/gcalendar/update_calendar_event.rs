@@ -1,5 +1,6 @@
 use crate::GCalendar;
 
+use crate::models::Calendar;
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
 use log::warn;
@@ -52,7 +53,7 @@ impl GCalendar {
         }
     }
 
-    pub fn compare_event(a: &calendar3::api::Event, b: &calendar3::api::Event) -> bool {
+    pub fn compare_event(a: &Event, b: &Event) -> bool {
         a.id == b.id
             && a.summary == b.summary
             && a.description == b.description
