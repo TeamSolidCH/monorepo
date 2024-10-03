@@ -63,6 +63,7 @@ impl Discord {
                 let mut create_new_message = false;
                 if let Entry::Occupied(o) = message_cache.entry(event.calendar_id.clone()) {
                     let message_id = serenity::MessageId::new(*o.get());
+                    debug!("Trying to edit message ({})", message_id.get());
 
                     let err = cache
                         .client
@@ -83,6 +84,7 @@ impl Discord {
                 }
 
                 if create_new_message {
+                    debug!("Send new message");
                     let res = channel
                         .send_message(cache, serenity::CreateMessage::new().add_embed(embed))
                         .await

@@ -6,10 +6,10 @@ This is free software, and you are welcome to redistribute it
  */
 
 pub mod discord;
-mod gcalendar;
+pub mod gcalendar;
 pub mod models;
 pub mod schema;
-mod types;
+pub mod types;
 
 use crate::gcalendar::{update_calendar_event::UpdateCalendarEvent, GCalendar};
 use anyhow::Error;
