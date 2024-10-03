@@ -1,153 +1,29 @@
 use crate::calendar::GCalendar;
 use crate::calendar::UpdateCalendarEvent;
-use crate::commands;
-use crate::types;
-use anyhow::{Error, Result};
+use crate::discord::{Discord, LocalCache};
+
+use anyhow::Result;
 use google_calendar3::api::Event;
-use google_calendar3::chrono::{Datelike, NaiveDate, Utc};
-use log::{debug, error, info};
+use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
+use log::{debug, error, trace, warn};
 use poise::serenity_prelude as serenity;
-use std::collections::btree_map::Entry;
-use std::collections::BTreeMap;
+use std::collections::{btree_map::Entry, BTreeMap};
 use std::sync::Arc;
-use tokio::sync::mpsc;
-use tokio::sync::Mutex;
-
-async fn on_error(error: poise::FrameworkError<'_, types::Data, Error>) {
-    // This is our custom error handler
-    // They are many errors that can occur, so we only handle the ones we want to customize
-    // and forward the rest to the default handler
-    match error {
-        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
-        poise::FrameworkError::Command { error, ctx, .. } => {
-            println!("Error in command `{}`: {:?}", ctx.command().name, error,)
-        }
-        error => {
-            if let Err(e) = poise::builtins::on_error(error).await {
-                println!("Error while handling error: {}", e)
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-struct LocalCache {
-    cache: Arc<serenity::Cache>,
-    client: Arc<serenity::Http>,
-}
-impl LocalCache {
-    fn new(client: Arc<serenity::Http>) -> Self {
-        Self {
-            cache: Arc::new(serenity::Cache::default()),
-            client,
-        }
-    }
-}
-
-impl serenity::CacheHttp for LocalCache {
-    fn http(&self) -> &serenity::Http {
-        &self.client
-    }
-
-    fn cache(&self) -> Option<&Arc<serenity::Cache>> {
-        Some(&self.cache)
-    }
-}
-
-pub struct Discord {
-    token: String,
-    intents: serenity::GatewayIntents,
-    cache: Arc<Mutex<Option<LocalCache>>>,
-}
+use tokio::sync::{mpsc, Mutex};
 
 impl Discord {
-    pub fn new(token: String, gateway_intents: serenity::GatewayIntents) -> Self {
-        Self {
-            token,
-            intents: gateway_intents,
-            cache: Arc::new(Mutex::new(None)),
-        }
-    }
-
-    pub async fn init(
-        &mut self,
-        calendar_rx: mpsc::Receiver<UpdateCalendarEvent>,
-        data: types::Data,
-    ) -> serenity::Client {
-        let cache_clone = self.cache.clone();
-
-        let framework = poise::Framework::builder()
-            .options(poise::FrameworkOptions {
-                commands: vec![
-                    commands::utilities::help(),
-                    commands::utilities::uptime(),
-                    commands::utilities::age(),
-                ],
-                on_error: |error| Box::pin(async move { on_error(error).await }),
-                pre_command: |ctx| {
-                    Box::pin(async move {
-                        let channel_name = &ctx
-                            .channel_id()
-                            .name(&ctx)
-                            .await
-                            .unwrap_or_else(|_| "<unknown>".to_owned());
-                        let author = &ctx.author().name;
-
-                        info!(
-                            "{} in {} used slash command '{}'",
-                            author,
-                            channel_name,
-                            &ctx.invoked_command_name()
-                        );
-                    })
-                },
-                post_command: |ctx| {
-                    Box::pin(async move {
-                        debug!(
-                            "{} executed command \"{}\"",
-                            ctx.author().tag(),
-                            ctx.command().qualified_name
-                        );
-                    })
-                },
-                ..Default::default()
-            })
-            .setup(move |ctx, ready, framework| {
-                Box::pin(async move {
-                    cache_clone
-                        .lock()
-                        .await
-                        .replace(LocalCache::new(ctx.http.clone()));
-
-                    Discord::new_data_thread(calendar_rx, cache_clone.clone());
-
-                    debug!("Registering commands..");
-                    poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-
-                    debug!("Setting activity text...");
-                    ctx.set_activity(Some(serenity::ActivityData::listening("/help")));
-
-                    info!("{} is ready !", ready.user.name);
-
-                    Ok(data)
-                })
-            })
-            .build();
-
-        let it = self.intents;
-        serenity::Client::builder(self.token.clone(), it)
-            .framework(framework)
-            .await
-            .expect("Failed to create client")
-    }
-
-    fn new_data_thread(
+    pub(crate) fn calendar_events_thread(
         mut calendar_rx: mpsc::Receiver<UpdateCalendarEvent>,
         cache: Arc<Mutex<Option<LocalCache>>>,
     ) {
+        //TODO: Find a better way to handle new events (maybe a threadpool)
         tokio::spawn(async move {
             let mut events_cache: BTreeMap<String, Vec<Event>> = BTreeMap::new();
+
+            // TODO: The message cache should be persisted between restarts (maybe redis or store
+            // in db ?)
             let mut message_cache: BTreeMap<String, u64> = BTreeMap::new();
+
             let channel = serenity::ChannelId::new(1102198299093647470);
 
             while let Some(event) = calendar_rx.recv().await {
@@ -161,7 +37,7 @@ impl Discord {
                     .count();
 
                 let do_match = matching == event.new_events.len() && matching == events.len();
-                debug!(
+                trace!(
                     "matching: {} == {} && {} == {}",
                     matching,
                     event.new_events.len(),
@@ -228,12 +104,37 @@ impl Discord {
     fn event_to_embed(events: Vec<Event>) -> Result<serenity::CreateEmbed> {
         let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<Event>> = BTreeMap::new();
         let mut fields: Vec<(String, String, bool)> = vec![];
+
         for ele in events {
             let ele_clone = ele.clone();
-            let start_date = ele_clone.start.unwrap().date_time.unwrap();
-            let end_date = ele.clone().end.unwrap().date_time.unwrap();
+
+            let start_date = ele_clone.start;
+            let end_date = ele_clone.end;
+
+            if let (None, None) = (start_date.as_ref(), end_date.as_ref()) {
+                warn!(
+                    "Event start date or event end date is None {:?}",
+                    ele.clone()
+                );
+                continue;
+            }
+
+            let start_date = start_date.unwrap().date_time;
+            let end_date = end_date.unwrap().date_time;
+
+            if let (None, None) = (start_date, end_date) {
+                warn!(
+                    "Event start datetime or event end datetime is None {:?}",
+                    ele.clone()
+                );
+                continue;
+            }
+
             sorted
-                .entry((start_date.date_naive(), end_date.date_naive()))
+                .entry((
+                    start_date.unwrap().date_naive(),
+                    end_date.unwrap().date_naive(),
+                ))
                 .or_default()
                 .push(ele);
         }
@@ -241,6 +142,22 @@ impl Discord {
         for ((start_date, end_date), events) in sorted.iter() {
             let mut field = String::new();
             for event in events {
+                match event.start {
+                    None => {
+                        warn!("Event start is None");
+                        continue;
+                    }
+                    _ => (),
+                }
+
+                match event.end {
+                    None => {
+                        warn!("Event end is None");
+                        continue;
+                    }
+                    _ => (),
+                }
+
                 field.push_str(&format!(
                     "```{} - {} | {}```\n",
                     event
@@ -248,14 +165,20 @@ impl Discord {
                         .clone()
                         .unwrap()
                         .date_time
-                        .unwrap()
+                        .unwrap_or_else(|| start_date
+                            .clone()
+                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                            .and_utc())
                         .format("%H:%M"),
                     event
                         .end
                         .clone()
                         .unwrap()
                         .date_time
-                        .unwrap()
+                        .unwrap_or_else(|| end_date
+                            .clone()
+                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                            .and_utc())
                         .format("%H:%M"),
                     event.summary.clone().unwrap()
                 ));
