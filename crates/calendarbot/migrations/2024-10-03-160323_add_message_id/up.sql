@@ -1,1 +1,1 @@
-ALTER TABLE guilds_calendars ADD COLUMN message_id varchar(64);
+ALTER TABLE guilds_calendars ADD COLUMN messageid varchar(64);

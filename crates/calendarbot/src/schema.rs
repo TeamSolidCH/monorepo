@@ -26,7 +26,7 @@ diesel::table! {
         #[max_length = 64]
         channelid -> Varchar,
         #[max_length = 64]
-        message_id -> Nullable<Varchar>,
+        messageid -> Nullable<Varchar>,
     }
 }
 

@@ -1,1 +1,1 @@
-ALTER TABLE guilds_calendars DROP COLUMN message_id;
+ALTER TABLE guilds_calendars DROP COLUMN messageid;

@@ -1,15 +1,15 @@
 use crate::GCalendar;
 
-use crate::models::Calendar;
+use crate::models::{Calendar, GuildCalendar};
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
-use log::warn;
+use log::{error, warn};
 use tokio::sync::mpsc::Sender;
 
 pub struct UpdateCalendarEvent {
     pub calendar_id: String,
     pub new_events: Vec<Event>,
-    pub discord_channel_ids: Vec<u64>,
+    pub discord_channel_and_message_ids: Vec<(u64, Option<u64>)>,
 }
 
 impl GCalendar {
@@ -31,21 +31,50 @@ impl GCalendar {
             .expect("Unable to get calendars");
 
         for calendar in db_calendars {
-            let calendar_id = calendar.googleid.clone();
+            let cal_id = calendar.googleid.clone();
             let sender = sender.clone();
             let events = self
                 .hub
                 .events()
-                .list(&calendar_id)
+                .list(&cal_id)
                 .time_min(chrono::Utc::now())
                 .doit()
                 .await
                 .expect("Unable to get events")
                 .1;
+
+            let guild_calendars = GuildCalendar::belonging_to(&calendar)
+                .select(GuildCalendar::as_select())
+                .load(db)
+                .expect("Unable to get channel and message ids");
+
+            let mut discord_channel_and_message_ids = Vec::new();
+
+            for guild_calendar in guild_calendars {
+                let channel_id = guild_calendar.channelid.parse::<u64>();
+                if let Err(e) = channel_id {
+                    error!("Unable to parse channel id: {:?}", e);
+                    continue;
+                }
+                let msg_id = if let Some(val) = guild_calendar.messageid {
+                    match val.parse::<u64>() {
+                        Err(e) => {
+                            warn!("Unable to parse message id: {:?}", e);
+                            None
+                        }
+                        Ok(parsed_val) => Some(parsed_val),
+                    }
+                } else {
+                    None
+                };
+
+                discord_channel_and_message_ids.push((channel_id.unwrap(), msg_id))
+            }
+
             sender
                 .send(UpdateCalendarEvent {
-                    discord_channel_ids: Vec::new(), //TODO: Get them from database
-                    calendar_id,
+                    discord_channel_and_message_ids,
+                    calendar_id: cal_id,
                     new_events: events.items.unwrap_or_default(),
                 })
                 .await
