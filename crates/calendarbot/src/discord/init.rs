@@ -4,7 +4,10 @@ use poise::serenity_prelude as serenity;
 use tokio::sync::mpsc;
 
 use crate::discord::LocalCache;
-use crate::{calendar::UpdateCalendarEvent, discord::commands, discord::Discord, types};
+use crate::{
+    discord::commands, discord::Discord, gcalendar::update_calendar_event::UpdateCalendarEvent,
+    types,
+};
 
 async fn on_error(error: poise::FrameworkError<'_, types::Data, Error>) {
     // This is our custom error handler

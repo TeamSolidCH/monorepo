@@ -1,6 +1,6 @@
-use crate::calendar::GCalendar;
-use crate::calendar::UpdateCalendarEvent;
 use crate::discord::{Discord, LocalCache};
+use crate::gcalendar::GCalendar;
+use crate::UpdateCalendarEvent;
 
 use anyhow::Result;
 use google_calendar3::api::Event;

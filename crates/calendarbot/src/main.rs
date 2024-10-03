@@ -5,10 +5,10 @@ This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
 
-mod discord;
+pub mod discord;
 mod gcalendar;
-mod models;
-mod schema;
+pub mod models;
+pub mod schema;
 mod types;
 
 use crate::gcalendar::{update_calendar_event::UpdateCalendarEvent, GCalendar};
