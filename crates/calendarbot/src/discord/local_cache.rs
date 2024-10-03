@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
 use poise::serenity_prelude as serenity;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct LocalCache {

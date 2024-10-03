@@ -1,6 +1,6 @@
 pub mod init;
 
-mod calendar_events;
+mod calendar_event;
 mod commands;
 mod local_cache;
 

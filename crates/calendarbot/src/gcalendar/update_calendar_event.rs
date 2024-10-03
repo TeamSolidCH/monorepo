@@ -1,58 +1,34 @@
-extern crate google_calendar3 as calendar3;
+use crate::GCalendar;
 
-use crate::models::*;
-
-use calendar3::hyper::client::HttpConnector;
-use calendar3::{chrono, hyper, hyper_rustls, oauth2, CalendarHub, Result};
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::PgConnection;
+use google_calendar3::{api::Event, chrono};
+use log::warn;
 use tokio::sync::mpsc::Sender;
-
-pub struct GCalendar {
-    pub hub: CalendarHub<hyper_rustls::HttpsConnector<HttpConnector>>,
-    pub db: Pool<ConnectionManager<PgConnection>>,
-}
 
 pub struct UpdateCalendarEvent {
     pub calendar_id: String,
-    pub new_events: Vec<calendar3::api::Event>,
+    pub new_events: Vec<Event>,
+    pub discord_channel_ids: Vec<u64>,
 }
 
 impl GCalendar {
-    pub async fn new(db: Pool<ConnectionManager<PgConnection>>) -> Result<GCalendar> {
-        let env = std::env::var("GOOGLE_CALENDAR_SERVICE_FILE")
-            .expect("GOOGLE_CALENDAR_SERVICE_FILE not set");
-
-        let service = oauth2::read_service_account_key(env)
-            .await
-            .expect("Unable to load service account file");
-
-        let authenticator = oauth2::ServiceAccountAuthenticator::builder(service)
-            .build()
-            .await
-            .expect("authenticator failed");
-
-        let hub = CalendarHub::new(
-            hyper::Client::builder().build(
-                hyper_rustls::HttpsConnectorBuilder::new()
-                    .with_native_roots()?
-                    .https_or_http()
-                    .enable_http1()
-                    .build(),
-            ),
-            authenticator,
-        );
-        Ok(GCalendar { db, hub })
-    }
-
     pub async fn update_calendars(&self, sender: Sender<UpdateCalendarEvent>) {
         use crate::schema::calendars::dsl::*;
-        let db = &mut self.db.clone().get().unwrap();
+
+        let db = &mut self.db.clone().get();
+
+        if let Err(e) = db {
+            warn!("Unable to clone db: {:?}", e);
+            return;
+        }
+
+        let db = db.as_mut().unwrap();
+
         let db_calendars = calendars
             .select(Calendar::as_select())
             .load(db)
             .expect("Unable to get calendars");
+
         for calendar in db_calendars {
             let calendar_id = calendar.googleid.clone();
             let sender = sender.clone();
@@ -67,6 +43,7 @@ impl GCalendar {
                 .1;
             sender
                 .send(UpdateCalendarEvent {
+                    discord_channel_ids: Vec::new(), //TODO: Get them from database
                     calendar_id,
                     new_events: events.items.unwrap_or_default(),
                 })

@@ -4,8 +4,8 @@ use crate::discord::{Discord, LocalCache};
 
 use anyhow::Result;
 use google_calendar3::api::Event;
-use google_calendar3::chrono::{Datelike, NaiveDate, Utc};
-use log::{debug, error, warn};
+use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
+use log::{debug, error, trace, warn};
 use poise::serenity_prelude as serenity;
 use std::collections::{btree_map::Entry, BTreeMap};
 use std::sync::Arc;
@@ -16,9 +16,14 @@ impl Discord {
         mut calendar_rx: mpsc::Receiver<UpdateCalendarEvent>,
         cache: Arc<Mutex<Option<LocalCache>>>,
     ) {
+        //TODO: Find a better way to handle new events (maybe a threadpool)
         tokio::spawn(async move {
             let mut events_cache: BTreeMap<String, Vec<Event>> = BTreeMap::new();
+
+            // TODO: The message cache should be persisted between restarts (maybe redis or store
+            // in db ?)
             let mut message_cache: BTreeMap<String, u64> = BTreeMap::new();
+
             let channel = serenity::ChannelId::new(1102198299093647470);
 
             while let Some(event) = calendar_rx.recv().await {
@@ -32,7 +37,7 @@ impl Discord {
                     .count();
 
                 let do_match = matching == event.new_events.len() && matching == events.len();
-                debug!(
+                trace!(
                     "matching: {} == {} && {} == {}",
                     matching,
                     event.new_events.len(),
@@ -99,12 +104,37 @@ impl Discord {
     fn event_to_embed(events: Vec<Event>) -> Result<serenity::CreateEmbed> {
         let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<Event>> = BTreeMap::new();
         let mut fields: Vec<(String, String, bool)> = vec![];
+
         for ele in events {
             let ele_clone = ele.clone();
-            let start_date = ele_clone.start.unwrap().date_time.unwrap();
-            let end_date = ele.clone().end.unwrap().date_time.unwrap();
+
+            let start_date = ele_clone.start;
+            let end_date = ele_clone.end;
+
+            if let (None, None) = (start_date.as_ref(), end_date.as_ref()) {
+                warn!(
+                    "Event start date or event end date is None {:?}",
+                    ele.clone()
+                );
+                continue;
+            }
+
+            let start_date = start_date.unwrap().date_time;
+            let end_date = end_date.unwrap().date_time;
+
+            if let (None, None) = (start_date, end_date) {
+                warn!(
+                    "Event start datetime or event end datetime is None {:?}",
+                    ele.clone()
+                );
+                continue;
+            }
+
             sorted
-                .entry((start_date.date_naive(), end_date.date_naive()))
+                .entry((
+                    start_date.unwrap().date_naive(),
+                    end_date.unwrap().date_naive(),
+                ))
                 .or_default()
                 .push(ele);
         }
@@ -135,14 +165,20 @@ impl Discord {
                         .clone()
                         .unwrap()
                         .date_time
-                        .unwrap()
+                        .unwrap_or_else(|| start_date
+                            .clone()
+                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                            .and_utc())
                         .format("%H:%M"),
                     event
                         .end
                         .clone()
                         .unwrap()
                         .date_time
-                        .unwrap()
+                        .unwrap_or_else(|| end_date
+                            .clone()
+                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                            .and_utc())
                         .format("%H:%M"),
                     event.summary.clone().unwrap()
                 ));

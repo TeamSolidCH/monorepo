@@ -4,14 +4,15 @@ Calendarbot  Copyright (C) 2023 Zbinden Yohan
 This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
-mod calendar;
-mod discord;
-pub mod models;
-pub mod schema;
-pub mod types;
 
+mod discord;
+mod gcalendar;
+mod models;
+mod schema;
+mod types;
+
+use crate::gcalendar::{update_calendar_event::UpdateCalendarEvent, GCalendar};
 use anyhow::Error;
-use calendar::UpdateCalendarEvent;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
@@ -50,7 +51,7 @@ async fn main() {
     let (tx, rx) = tokio::sync::mpsc::channel::<UpdateCalendarEvent>(200);
 
     tokio::spawn(async move {
-        let g_client = calendar::GCalendar::new(pool.clone())
+        let g_client = GCalendar::new(pool.clone())
             .await
             .expect("Unable to connect to google calendar");
 
