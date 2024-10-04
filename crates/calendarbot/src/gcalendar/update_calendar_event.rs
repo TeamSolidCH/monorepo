@@ -3,7 +3,7 @@ use crate::GCalendar;
 use crate::models::{Calendar, GuildCalendar};
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
-use log::{error, warn};
+use log::{debug, error, trace, warn};
 use tokio::sync::mpsc::Sender;
 
 pub struct UpdateCalendarEvent {
@@ -13,7 +13,7 @@ pub struct UpdateCalendarEvent {
 }
 
 impl GCalendar {
-    pub async fn update_calendars(&self, sender: Sender<UpdateCalendarEvent>) {
+    pub async fn update_calendars(&mut self, sender: Sender<UpdateCalendarEvent>) {
         use crate::schema::calendars::dsl::*;
 
         let db = &mut self.db.clone().get();
@@ -42,6 +42,35 @@ impl GCalendar {
                 .await
                 .expect("Unable to get events")
                 .1;
+
+            let new_events = events.items.clone().unwrap_or_default();
+
+            let cached_events = self.events_cache.entry(cal_id.clone()).or_default();
+            let matching = cached_events
+                .iter()
+                .zip(new_events.iter())
+                .filter(|&(a, b)| GCalendar::compare_event(a, b))
+                .count();
+
+            let do_match = matching == new_events.len() && matching == cached_events.len();
+            trace!(
+                "matching: {} == {} && {} == {}",
+                matching,
+                new_events.len(),
+                matching,
+                cached_events.len()
+            );
+
+            if do_match && !cached_events.is_empty() {
+                debug!("No new events");
+                continue;
+            }
+
+            // Add new events to cache
+            if !cached_events.is_empty() {
+                cached_events.clear();
+            }
+            cached_events.extend(new_events.clone());
 
             let guild_calendars = GuildCalendar::belonging_to(&calendar)
                 .select(GuildCalendar::as_select())
@@ -75,7 +104,7 @@ impl GCalendar {
                 .send(UpdateCalendarEvent {
                     discord_channel_and_message_ids,
                     calendar_id: cal_id,
-                    new_events: events.items.unwrap_or_default(),
+                    new_events,
                 })
                 .await
                 .expect("Unable to send events");

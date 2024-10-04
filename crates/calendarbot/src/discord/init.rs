@@ -77,7 +77,11 @@ impl Discord {
                         .await
                         .replace(LocalCache::new(ctx.http.clone()));
 
-                    Discord::calendar_events_thread(calendar_rx, cache_clone.clone());
+                    Discord::calendar_events_thread(
+                        calendar_rx,
+                        cache_clone.clone(),
+                        data.db.clone(),
+                    );
 
                     debug!("Registering commands..");
                     poise::builtins::register_globally(ctx, &framework.options().commands).await?;

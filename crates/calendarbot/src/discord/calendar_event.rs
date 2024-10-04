@@ -1,56 +1,76 @@
 use crate::discord::{Discord, LocalCache};
-use crate::gcalendar::GCalendar;
 use crate::UpdateCalendarEvent;
 
 use anyhow::Result;
+use diesel::r2d2::{ConnectionManager, Pool};
+use crate::schema::guilds_calendars::dsl as guilds_calendars;
+use crate::schema::calendars::dsl as calendars;
+use diesel::prelude::*;
+use diesel::PgConnection;
 use google_calendar3::api::Event;
 use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
-use log::{debug, error, trace, warn};
+use log::{debug, error, warn};
 use poise::serenity_prelude as serenity;
-use std::collections::{btree_map::Entry, BTreeMap};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 
 impl Discord {
+    /// Send or edit a message in a channel
+    async fn send_or_edit_message(channel_id: u64, message_id: Option<u64>, embed: serenity::CreateEmbed, cache: LocalCache) -> Result<serenity::MessageId>
+    {
+      let channel = serenity::ChannelId::new(channel_id);
+      if let Some(message_id) = message_id {
+        let msg_id = serenity::MessageId::new(message_id);
+        debug!("Trying to edit message ({})", msg_id.get());
+        let result = cache
+                        .client
+                        .edit_message(
+                            channel,
+                            msg_id,
+                            &serenity::EditMessage::new().add_embed(embed.clone()),
+                            Vec::new(),
+                        )
+                        .await;
+
+        if let Err(e) = result {
+                        error!("Failed to edit message ({}): {}", message_id.clone(), e);
+                    } else {
+                        return Ok(msg_id);
+                    }
+      }
+        
+        debug!("Send new message");
+        match channel
+            .send_message(cache, serenity::CreateMessage::new().add_embed(embed))
+            .await {
+                Err(e) => Err(e.into()),
+                Ok(res) => Ok(res.id)
+            }
+
+        
+    }
+
     pub(crate) fn calendar_events_thread(
         mut calendar_rx: mpsc::Receiver<UpdateCalendarEvent>,
         cache: Arc<Mutex<Option<LocalCache>>>,
+        db: Pool<ConnectionManager<PgConnection>>,
     ) {
         //TODO: Find a better way to handle new events (maybe a threadpool)
         tokio::spawn(async move {
-            let mut events_cache: BTreeMap<String, Vec<Event>> = BTreeMap::new();
+            let db = db.get();
+            if let Err(e) = db {
+                error!("Unable to get db connection from poolmanager: {:?}", e);
+                return;
+            }
 
-            // TODO: The message cache should be persisted between restarts (maybe redis or store
-            // in db ?)
-            let mut message_cache: BTreeMap<String, u64> = BTreeMap::new();
-
-            let channel = serenity::ChannelId::new(1102198299093647470);
+            let mut db = db.unwrap();
 
             while let Some(event) = calendar_rx.recv().await {
                 debug!("Received event for calendar {}", event.calendar_id);
 
-                let events = events_cache.entry(event.calendar_id.clone()).or_default();
-                let matching = events
-                    .iter()
-                    .zip(event.new_events.iter())
-                    .filter(|&(a, b)| GCalendar::compare_event(a, b))
-                    .count();
-
-                let do_match = matching == event.new_events.len() && matching == events.len();
-                trace!(
-                    "matching: {} == {} && {} == {}",
-                    matching,
-                    event.new_events.len(),
-                    matching,
-                    events.len()
-                );
-
-                if do_match && !events.is_empty() {
-                    debug!("No new events");
-                    continue;
-                }
-
                 let cache = cache.as_ref().lock().await.clone().unwrap();
+
                 let embed = match Discord::event_to_embed(event.new_events.clone()) {
                     Ok(v) => v,
                     Err(_) => serenity::CreateEmbed::new().title("Events").field(
@@ -59,46 +79,32 @@ impl Discord {
                         true,
                     ),
                 };
+                
+                for (channel_id, message_id) in event.discord_channel_and_message_ids {
+                    let result = Discord::send_or_edit_message(channel_id, message_id, embed.clone(), cache.clone()).await;
 
-                let mut create_new_message = false;
-                if let Entry::Occupied(o) = message_cache.entry(event.calendar_id.clone()) {
-                    let message_id = serenity::MessageId::new(*o.get());
-                    debug!("Trying to edit message ({})", message_id.get());
+                    match result {
+                        Err(e) => {
+                            error!("Failed to send or edit message: {}, calendar: {}, channel_id: {:?}, message_id: {:?}", e, event.calendar_id, channel_id, message_id);
+                        },
+                        Ok(msg_id) => {
+                            // We need to update the message_id in the database
+                            if Some(msg_id.get()) != message_id {
+                                let db_cal_id = calendars::calendars.filter(calendars::googleid.eq(event.calendar_id.clone()))
+                                    .select(calendars::id)
+                                    .first::<i32>(&mut db)
+                                    .expect("Unable to get calendar id from database");
+                                                                    
 
-                    let err = cache
-                        .client
-                        .edit_message(
-                            channel,
-                            message_id,
-                            &serenity::EditMessage::new().add_embed(embed.clone()),
-                            Vec::new(),
-                        )
-                        .await;
-
-                    if let Err(e) = err {
-                        error!("Failed to edit message ({}): {}", message_id.clone(), e);
-                        create_new_message = true;
+                                diesel::update(guilds_calendars::guilds_calendars)
+                                    .filter(guilds_calendars::channelid.eq(channel_id.to_string()).and(guilds_calendars::calendar_id.eq(db_cal_id)))
+                                    .set(guilds_calendars::messageid.eq(msg_id.get().to_string()))
+                                    .execute(&mut db)
+                                    .expect("Unable to update message id in database");
+                            }                                        
+                        }
                     };
-                } else {
-                    create_new_message = true;
                 }
-
-                if create_new_message {
-                    debug!("Send new message");
-                    let res = channel
-                        .send_message(cache, serenity::CreateMessage::new().add_embed(embed))
-                        .await
-                        .unwrap();
-
-                    message_cache
-                        .entry(event.calendar_id.clone())
-                        .or_insert(res.id.get());
-                }
-
-                if !events.is_empty() {
-                    events.clear();
-                }
-                events.extend(event.new_events.clone());
             }
         });
     }
