@@ -21,11 +21,11 @@ jobs:
           name: yoyozbi-ci-cache
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: 'Run tests'
-        run: 'nix develop --accept-flake-config #. -c moon ci :test'
+        run: 'nix develop --impure --accept-flake-config #. -c "moon ci :test"'
         shell: bash
       - name: 'Run lint'
-        run: 'nix develop --accept-flake-config #. -c moon ci :lint '
+        run: 'nix develop --impure --accept-flake-config #. -c "moon ci :lint" '
         shell: bash
       - name: 'Run format'
-        run: 'nix develop --accept-flake-config #. -c moon ci :format'
+        run: 'nix develop --impure --accept-flake-config #. -c "moon ci :format"'
         shell: bash
