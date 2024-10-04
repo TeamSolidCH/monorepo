@@ -81,6 +81,7 @@ impl Discord {
                 };
                 
                 for (channel_id, message_id) in event.discord_channel_and_message_ids {
+                    debug!(target: &channel_id.to_string(), "Handling new_events with message_id: {:?}", message_id);
                     let result = Discord::send_or_edit_message(channel_id, message_id, embed.clone(), cache.clone()).await;
 
                     match result {

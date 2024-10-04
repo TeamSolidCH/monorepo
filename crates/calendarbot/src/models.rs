@@ -21,6 +21,7 @@ pub struct GuildCalendar {
     pub calendar_id: i32,
     pub channelid: String,
     pub messageid: Option<String>,
+    pub forceupdate: bool,
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Debug)]

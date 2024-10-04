@@ -27,6 +27,7 @@ diesel::table! {
         channelid -> Varchar,
         #[max_length = 64]
         messageid -> Nullable<Varchar>,
+        forceupdate -> Bool,
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::GCalendar;
 
 use crate::models::{Calendar, GuildCalendar};
+use crate::schema::guilds_calendars;
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
 use log::{debug, error, trace, warn};
@@ -61,9 +62,26 @@ impl GCalendar {
                 cached_events.len()
             );
 
-            if do_match && !cached_events.is_empty() {
+            let mut guild_calendars = GuildCalendar::belonging_to(&calendar)
+                .select(GuildCalendar::as_select())
+                .load(db)
+                .expect("Unable to get channel and message ids");
+
+            let forced_update = guild_calendars
+                .iter()
+                .any(|guild_calendar| guild_calendar.forceupdate);
+
+            if do_match && !cached_events.is_empty() && !forced_update {
                 debug!("No new events");
                 continue;
+            }
+
+            // if it is a forced update only update these channels
+            if forced_update {
+                guild_calendars = guild_calendars
+                    .into_iter()
+                    .filter(|guild_calendar| guild_calendar.forceupdate)
+                    .collect::<Vec<GuildCalendar>>();
             }
 
             // Add new events to cache
@@ -71,11 +89,6 @@ impl GCalendar {
                 cached_events.clear();
             }
             cached_events.extend(new_events.clone());
-
-            let guild_calendars = GuildCalendar::belonging_to(&calendar)
-                .select(GuildCalendar::as_select())
-                .load(db)
-                .expect("Unable to get channel and message ids");
 
             let mut discord_channel_and_message_ids = Vec::new();
 
@@ -108,6 +121,17 @@ impl GCalendar {
                 })
                 .await
                 .expect("Unable to send events");
+
+            // If was forced update change to false in db
+            if forced_update {
+                let res = diesel::update(GuildCalendar::belonging_to(&calendar))
+                    .set(guilds_calendars::forceupdate.eq(false))
+                    .execute(db);
+
+                if let Err(e) = res {
+                    error!("Unable to change forceUpdate to false: {}", e);
+                }
+            }
         }
     }
 
