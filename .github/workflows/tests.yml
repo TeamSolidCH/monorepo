@@ -18,8 +18,8 @@ jobs:
       - name: "ldd version"
         run: 'ldd --version'
       - name: 'Run tests'
-        run: 'nix develop --impure --command bash -c "moon ci :test" #.'
+        run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :test" #.'
       - name: 'Run lint'
-        run: 'nix develop --impure --command bash -c "moon ci :lint" #.'
+        run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :lint" #.'
       - name: 'Run format'
-        run: 'nix develop --impure --command bash -c "moon ci :format" #.'
+        run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :format" #.'
