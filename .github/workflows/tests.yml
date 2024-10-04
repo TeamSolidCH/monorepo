@@ -15,15 +15,14 @@ jobs:
       - uses: 'actions/checkout@v4'
         with:
           fetch-depth: 0
-      - uses: cachix/install-nix-action@v26
-      - uses: cachix/cachix-action@v14
-        with:
-          name: devenv
-      - name: "ldd version"
-        run: 'ldd --version'
+      - name: "Setup env"
+        uses: JRMurr/direnv-nix-action@v4.1.0
       - name: 'Run tests'
         run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :test" #.'
+        shell: bash
       - name: 'Run lint'
         run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :lint" #.'
+        shell: bash
       - name: 'Run format'
         run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :format" #.'
+        shell: bash
