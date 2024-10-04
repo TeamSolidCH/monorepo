@@ -21,7 +21,7 @@ jobs:
           name: yoyozbi-ci-cache
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: 'Build env'
-        run: 'nix develop --impure --accept-flake-config --comand bash -c "echo hello" #.'
+        run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
       - name: 'Run tests'
         run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci :test" #.'
         shell: bash
