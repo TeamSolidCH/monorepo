@@ -1,19 +1,20 @@
 use crate::GCalendar;
 
-use crate::models::Calendar;
+use crate::models::{Calendar, GuildCalendar};
+use crate::schema::guilds_calendars;
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
-use log::warn;
+use log::{debug, error, trace, warn};
 use tokio::sync::mpsc::Sender;
 
 pub struct UpdateCalendarEvent {
     pub calendar_id: String,
     pub new_events: Vec<Event>,
-    pub discord_channel_ids: Vec<u64>,
+    pub discord_channel_and_message_ids: Vec<(u64, Option<u64>)>,
 }
 
 impl GCalendar {
-    pub async fn update_calendars(&self, sender: Sender<UpdateCalendarEvent>) {
+    pub async fn update_calendars(&mut self, sender: Sender<UpdateCalendarEvent>) {
         use crate::schema::calendars::dsl::*;
 
         let db = &mut self.db.clone().get();
@@ -31,25 +32,106 @@ impl GCalendar {
             .expect("Unable to get calendars");
 
         for calendar in db_calendars {
-            let calendar_id = calendar.googleid.clone();
+            let cal_id = calendar.googleid.clone();
             let sender = sender.clone();
             let events = self
                 .hub
                 .events()
-                .list(&calendar_id)
+                .list(&cal_id)
                 .time_min(chrono::Utc::now())
                 .doit()
                 .await
                 .expect("Unable to get events")
                 .1;
+
+            let new_events = events.items.clone().unwrap_or_default();
+
+            let cached_events = self.events_cache.entry(cal_id.clone()).or_default();
+            let matching = cached_events
+                .iter()
+                .zip(new_events.iter())
+                .filter(|&(a, b)| GCalendar::compare_event(a, b))
+                .count();
+
+            let do_match = matching == new_events.len() && matching == cached_events.len();
+            trace!(
+                "matching: {} == {} && {} == {}",
+                matching,
+                new_events.len(),
+                matching,
+                cached_events.len()
+            );
+
+            let mut guild_calendars = GuildCalendar::belonging_to(&calendar)
+                .select(GuildCalendar::as_select())
+                .load(db)
+                .expect("Unable to get channel and message ids");
+
+            let forced_update = guild_calendars
+                .iter()
+                .any(|guild_calendar| guild_calendar.forceupdate);
+
+            if do_match && !cached_events.is_empty() && !forced_update {
+                debug!("No new events");
+                continue;
+            }
+
+            // if it is a forced update only update these channels
+            if forced_update {
+                guild_calendars = guild_calendars
+                    .into_iter()
+                    .filter(|guild_calendar| guild_calendar.forceupdate)
+                    .collect::<Vec<GuildCalendar>>();
+            }
+
+            // Add new events to cache
+            if !cached_events.is_empty() {
+                cached_events.clear();
+            }
+            cached_events.extend(new_events.clone());
+
+            let mut discord_channel_and_message_ids = Vec::new();
+
+            for guild_calendar in guild_calendars {
+                let channel_id = guild_calendar.channelid.parse::<u64>();
+                if let Err(e) = channel_id {
+                    error!("Unable to parse channel id: {:?}", e);
+                    continue;
+                }
+                let msg_id = if let Some(val) = guild_calendar.messageid {
+                    match val.parse::<u64>() {
+                        Err(e) => {
+                            warn!("Unable to parse message id: {:?}", e);
+                            None
+                        }
+                        Ok(parsed_val) => Some(parsed_val),
+                    }
+                } else {
+                    None
+                };
+
+                discord_channel_and_message_ids.push((channel_id.unwrap(), msg_id))
+            }
+
             sender
                 .send(UpdateCalendarEvent {
-                    discord_channel_ids: Vec::new(), //TODO: Get them from database
-                    calendar_id,
-                    new_events: events.items.unwrap_or_default(),
+                    discord_channel_and_message_ids,
+                    calendar_id: cal_id,
+                    new_events,
                 })
                 .await
                 .expect("Unable to send events");
+
+            // If was forced update change to false in db
+            if forced_update {
+                let res = diesel::update(GuildCalendar::belonging_to(&calendar))
+                    .set(guilds_calendars::forceupdate.eq(false))
+                    .execute(db);
+
+                if let Err(e) = res {
+                    error!("Unable to change forceUpdate to false: {}", e);
+                }
+            }
         }
     }
 

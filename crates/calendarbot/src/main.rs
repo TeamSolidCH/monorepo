@@ -51,7 +51,7 @@ async fn main() {
     let (tx, rx) = tokio::sync::mpsc::channel::<UpdateCalendarEvent>(200);
 
     tokio::spawn(async move {
-        let g_client = GCalendar::new(pool.clone())
+        let mut g_client = GCalendar::new(pool.clone())
             .await
             .expect("Unable to connect to google calendar");
 

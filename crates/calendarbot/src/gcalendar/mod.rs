@@ -2,12 +2,15 @@ pub mod update_calendar_event;
 
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
+use google_calendar3::api::Event;
 use google_calendar3::hyper::client::HttpConnector;
 use google_calendar3::{hyper, hyper_rustls, oauth2, CalendarHub, Result};
+use std::collections::BTreeMap;
 
 pub struct GCalendar {
     pub hub: CalendarHub<hyper_rustls::HttpsConnector<HttpConnector>>,
     pub db: Pool<ConnectionManager<PgConnection>>,
+    events_cache: BTreeMap<String, Vec<Event>>,
 }
 
 impl GCalendar {
@@ -34,6 +37,10 @@ impl GCalendar {
             ),
             authenticator,
         );
-        Ok(GCalendar { db, hub })
+        Ok(GCalendar {
+            db,
+            hub,
+            events_cache: BTreeMap::new(),
+        })
     }
 }

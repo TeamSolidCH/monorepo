@@ -25,14 +25,13 @@ diesel::table! {
         calendar_id -> Int4,
         #[max_length = 64]
         channelid -> Varchar,
+        #[max_length = 64]
+        messageid -> Nullable<Varchar>,
+        forceupdate -> Bool,
     }
 }
 
 diesel::joinable!(guilds_calendars -> calendars (calendar_id));
 diesel::joinable!(guilds_calendars -> guilds (guild_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    calendars,
-    guilds,
-    guilds_calendars,
-);
+diesel::allow_tables_to_appear_in_same_query!(calendars, guilds, guilds_calendars,);
