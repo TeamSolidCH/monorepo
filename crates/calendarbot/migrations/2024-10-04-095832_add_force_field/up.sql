@@ -1,1 +1,0 @@
-ALTER TABLE guilds_calendars ADD COLUMN forceUpdate BOOLEAN NOT NULL DEFAULT TRUE;
