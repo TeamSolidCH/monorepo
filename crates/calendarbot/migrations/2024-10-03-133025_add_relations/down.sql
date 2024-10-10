@@ -1,3 +1,0 @@
-ALTER TABLE guilds_calendars DROP CONSTRAINT fk_guilds_calendars_guilds;
-
-ALTER TABLE guilds_calendars DROP CONSTRAINT fk_guilds_calendars_calendars;
