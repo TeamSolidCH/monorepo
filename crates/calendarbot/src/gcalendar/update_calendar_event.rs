@@ -1,30 +1,35 @@
 use crate::GCalendar;
 
+use crate::events::UpdateCalendarEvent;
 use crate::models::{Calendar, GuildCalendar};
 use crate::schema::guilds_calendars;
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
 use log::{debug, error, trace, warn};
-use tokio::sync::mpsc::Sender;
-
-pub struct UpdateCalendarEvent {
-    pub calendar_id: String,
-    pub new_events: Vec<Event>,
-    pub discord_channel_and_message_ids: Vec<(u64, Option<u64>)>,
-}
+use std::{thread, time::Duration};
 
 impl GCalendar {
-    pub async fn update_calendars(&mut self, sender: Sender<UpdateCalendarEvent>) {
-        use crate::schema::calendars::dsl::*;
+    pub(crate) fn new_update_calendars_thread(self) -> Self {
+        let mut self_clone = self.clone();
+        tokio::spawn(async move {
+            loop {
+                self_clone.update_calendars().await;
+                trace!("Updated calendars");
+                thread::sleep(Duration::from_secs(60));
+            }
+        });
+        self
+    }
 
+    async fn update_calendars(&mut self) {
         let db = &mut self.db.clone().get();
-
         if let Err(e) = db {
             warn!("Unable to clone db: {:?}", e);
             return;
         }
 
         let db = db.as_mut().unwrap();
+        use crate::schema::calendars::dsl::*;
 
         let db_calendars = calendars
             .select(Calendar::as_select())
@@ -33,7 +38,7 @@ impl GCalendar {
 
         for calendar in db_calendars {
             let cal_id = calendar.googleid.clone();
-            let sender = sender.clone();
+            let sender = self.senders.update_calendar_tx.clone();
             let events = self
                 .hub
                 .events()

@@ -11,15 +11,21 @@ use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
 use poise::serenity_prelude as serenity;
 
+use crate::gcalendar::GCalendar;
+
 pub struct Data {
     pub application_id: serenity::UserId,
     pub client_id: serenity::UserId,
     pub bot_start_time: std::time::Instant,
     pub db: Pool<ConnectionManager<PgConnection>>,
+    pub g_calendar: GCalendar,
 }
 
 impl Data {
-    pub fn new(db_connection: Pool<ConnectionManager<PgConnection>>) -> Result<Data> {
+    pub fn new(
+        db_connection: Pool<ConnectionManager<PgConnection>>,
+        g_calendar: GCalendar,
+    ) -> Result<Data> {
         Ok(Self {
             application_id: env::var("APPLICATION_ID")
                 .expect("APPLICATION_ID not found")
@@ -31,6 +37,7 @@ impl Data {
                 .into(),
             bot_start_time: std::time::Instant::now(),
             db: db_connection,
+            g_calendar,
         })
     }
 }

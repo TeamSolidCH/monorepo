@@ -6,24 +6,25 @@ This is free software, and you are welcome to redistribute it
  */
 
 pub mod discord;
+pub mod events;
 pub mod gcalendar;
 pub mod models;
 pub mod schema;
 pub mod types;
 
-use crate::gcalendar::{update_calendar_event::UpdateCalendarEvent, GCalendar};
+use crate::events::{UpdateCalendarEvent, VerifyCalendarEvent};
+use crate::gcalendar::{GCalendar, GCalendarChannelReceivers, GCalendarChannelSenders};
 use anyhow::Error;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
-use log::info;
 use poise::serenity_prelude as serenity;
-use std::time::Duration;
-use std::{env, thread};
+use std::env;
 
 use dotenvy::dotenv;
 
 type Context<'a> = poise::Context<'a, types::Data, Error>;
+type ApplicationContext<'a> = poise::ApplicationContext<'a, types::Data, Error>;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
@@ -46,23 +47,22 @@ async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not found");
     let intents = serenity::GatewayIntents::non_privileged();
 
-    let data = types::Data::new(pool.clone()).expect("Unable to load config!");
+    let (update_calendar_tx, update_calendar_rx) =
+        tokio::sync::mpsc::channel::<UpdateCalendarEvent>(200);
 
-    let (tx, rx) = tokio::sync::mpsc::channel::<UpdateCalendarEvent>(200);
+    let (verify_calendar_tx, verify_calendar_rx) =
+        tokio::sync::mpsc::channel::<VerifyCalendarEvent>(200);
 
-    tokio::spawn(async move {
-        let mut g_client = GCalendar::new(pool.clone())
-            .await
-            .expect("Unable to connect to google calendar");
+    let g_client = GCalendar::new(pool.clone(), GCalendarChannelSenders { update_calendar_tx })
+        .await
+        .expect("Unable to connect to google calendar")
+        .init_threads(GCalendarChannelReceivers { verify_calendar_rx });
 
-        loop {
-            info!("Updating calendars");
-            g_client.update_calendars(tx.clone()).await;
-            thread::sleep(Duration::from_secs(10));
-        }
-    });
+    let data = types::Data::new(pool.clone(), g_client).expect("Unable to load config!");
 
-    let mut client = discord::Discord::new(token, intents).init(rx, data).await;
+    let mut client = discord::Discord::new(token, intents)
+        .init(update_calendar_rx, data)
+        .await;
 
     if let Err(why) = client.start().await {
         println!("An error occured while running the client: {:?}", why);
