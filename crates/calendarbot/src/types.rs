@@ -1,15 +1,15 @@
-use std::env;
-
 /*
 Calendarbot  Copyright (C) 2023 Zbinden Yohan
 
 This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
+
 use anyhow::{Error, Result};
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
 use poise::serenity_prelude as serenity;
+use std::env;
 
 use crate::gcalendar::GCalendar;
 
