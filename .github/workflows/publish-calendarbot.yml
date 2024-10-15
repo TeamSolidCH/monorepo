@@ -55,8 +55,7 @@ jobs:
         id: version
         run: |
           push_string="push"
-          if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]
-          then
+          if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
             echo "Run for tag"
             tag_name=$GITHUB_REF_NAME
             echo "Tag name: $tag_name"
