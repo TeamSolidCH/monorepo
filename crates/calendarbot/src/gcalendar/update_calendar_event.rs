@@ -13,7 +13,7 @@ use crate::schema::guilds_calendars;
 use diesel::prelude::*;
 use google_calendar3::{api::Event, chrono};
 use log::{debug, error, trace, warn};
-use std::{thread, time::Duration};
+use std::time::Duration;
 
 impl GCalendar {
     pub(crate) fn new_update_calendars_thread(self) -> Self {

@@ -22,7 +22,7 @@ impl GCalendar {
         }
 
         trace!("Calendar ID is valid, checking if accessible");
-        let result = self.hub.calendars().get(&calendar_id).doit().await;
+        let result = self.hub.calendars().get(calendar_id).doit().await;
         trace!("Calendar ID is valid, checking if accessible");
 
         match result {

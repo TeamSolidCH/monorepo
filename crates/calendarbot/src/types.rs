@@ -13,7 +13,6 @@ use std::env;
 use tokio::sync::mpsc::Sender;
 
 use crate::events::CalendarCommands;
-use crate::gcalendar::GCalendar;
 
 pub struct Data {
     pub application_id: serenity::UserId,

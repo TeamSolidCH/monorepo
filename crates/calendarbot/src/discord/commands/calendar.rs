@@ -11,7 +11,6 @@ use crate::schema::guilds_calendars::dsl as guilds_calendars;
 use crate::ApplicationContext;
 use anyhow::Result;
 use diesel::prelude::*;
-use log::info;
 use poise::serenity_prelude::{self as serenity};
 use tokio::sync::oneshot;
 
@@ -36,12 +35,9 @@ pub async fn new(
         .select(guilds_calendars::channelid)
         .first::<String>(&mut db);
 
-    match res {
-        Ok(_) => {
-            let _ = ctx.reply("This channel already has a calendar").await?;
-            return Ok(());
-        }
-        Err(_) => {}
+    if let Ok(_) = res {
+        let _ = ctx.reply("This channel already has a calendar").await?;
+        return Ok(());
     }
 
     // Checking if the calendar is already present in db
@@ -72,10 +68,7 @@ pub async fn new(
 
         ctx.data().gcalendar_tx.clone().send(cmd).await.unwrap();
 
-        let is_valid = resp_rx
-            .await
-            .unwrap_or_else(|_| Ok(false))
-            .unwrap_or_else(|_| false);
+        let is_valid = resp_rx.await.unwrap_or(Ok(false)).unwrap_or(false);
 
         if !is_valid {
             let _ = ctx.reply("Invalid calendar ID").await?;
