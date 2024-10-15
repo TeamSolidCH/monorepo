@@ -1,6 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+		nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
@@ -18,12 +19,17 @@
     {
       packages = forEachSystem (system: {
         devenv-up = self.devShells.${system}.default.config.procfileScript;
+
       });
 
       devShells = forEachSystem
         (system:
           let
             pkgs = nixpkgs.legacyPackages.${system};
+						pkgs-unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
+						unstable-packages = with pkgs-unstable; [
+								moon
+						];
           in
           {
             default = devenv.lib.mkShell {
@@ -32,14 +38,13 @@
                 {
                   # https://devenv.sh/reference/options/
                   packages = with pkgs; [ 
-										moon
                     nix-ld
                     openssl.dev
                     pkg-config
                     dbus.dev
                     postgresql
                     diesel-cli
-									];
+									] ++ unstable-packages; 
 
                   env = {
                     # https://devenv.sh/reference/environment/

@@ -1,3 +1,10 @@
+/*
+Calendarbot  Copyright (C) 2023 Zbinden Yohan
+
+This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This is free software, and you are welcome to redistribute it
+ */
+
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Debug)]
@@ -6,8 +13,8 @@ use diesel::prelude::*;
 pub struct Calendar {
     pub id: i32,
     pub googleid: String,
-    pub timezone: Option<String>,
-    pub pollinterval: Option<i32>,
+    pub timezone: String,
+    pub pollinterval: i32,
 }
 
 #[derive(Identifiable, Queryable, Selectable, Associations, Debug)]

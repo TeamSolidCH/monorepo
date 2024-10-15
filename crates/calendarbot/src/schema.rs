@@ -6,8 +6,8 @@ diesel::table! {
         #[max_length = 90]
         googleid -> Varchar,
         #[max_length = 30]
-        timezone -> Nullable<Varchar>,
-        pollinterval -> Nullable<Int4>,
+        timezone -> Varchar,
+        pollinterval -> Int4,
     }
 }
 
@@ -34,8 +34,4 @@ diesel::table! {
 diesel::joinable!(guilds_calendars -> calendars (calendar_id));
 diesel::joinable!(guilds_calendars -> guilds (guild_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    calendars,
-    guilds,
-    guilds_calendars,
-);
+diesel::allow_tables_to_appear_in_same_query!(calendars, guilds, guilds_calendars,);

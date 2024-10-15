@@ -1,3 +1,10 @@
+/*
+Calendarbot  Copyright (C) 2023 Zbinden Yohan
+
+This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This is free software, and you are welcome to redistribute it
+ */
+
 use crate::discord::{Discord, LocalCache};
 use crate::UpdateCalendarEvent;
 
@@ -164,21 +171,15 @@ impl Discord {
         for ((start_date, end_date), events) in sorted.iter() {
             let mut field = String::new();
             for event in events {
-                match event.start {
-                    None => {
-                        warn!("Event start is None");
-                        continue;
-                    }
-                    _ => (),
-                }
+                if event.start.is_none() {
+                    warn!("Event start is None");
+                    continue;
+                };
 
-                match event.end {
-                    None => {
-                        warn!("Event end is None");
-                        continue;
-                    }
-                    _ => (),
-                }
+                if event.end.is_none() {
+                    warn!("Event end is None");
+                    continue;
+                };
 
                 field.push_str(&format!(
                     "```{} - {} | {}```\n",

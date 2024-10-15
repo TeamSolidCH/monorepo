@@ -1,13 +1,17 @@
+/*
+Calendarbot  Copyright (C) 2023 Zbinden Yohan
+
+This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This is free software, and you are welcome to redistribute it
+ */
+
 use anyhow::Error;
 use log::{debug, error, info};
 use poise::serenity_prelude as serenity;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::Receiver;
 
 use crate::discord::LocalCache;
-use crate::{
-    discord::commands, discord::Discord, gcalendar::update_calendar_event::UpdateCalendarEvent,
-    types,
-};
+use crate::{discord::commands, discord::Discord, events::UpdateCalendarEvent, types};
 
 async fn on_error(error: poise::FrameworkError<'_, types::Data, Error>) {
     // This is our custom error handler
@@ -29,7 +33,7 @@ async fn on_error(error: poise::FrameworkError<'_, types::Data, Error>) {
 impl Discord {
     pub async fn init(
         &mut self,
-        calendar_rx: mpsc::Receiver<UpdateCalendarEvent>,
+        calendar_rx: Receiver<UpdateCalendarEvent>,
         data: types::Data,
     ) -> serenity::Client {
         let cache_clone = self.cache.clone();
@@ -40,6 +44,7 @@ impl Discord {
                     commands::utilities::help(),
                     commands::utilities::uptime(),
                     commands::utilities::age(),
+                    commands::calendar::new(),
                 ],
                 on_error: |error| Box::pin(async move { on_error(error).await }),
                 pre_command: |ctx| {
