@@ -53,7 +53,7 @@ async fn main() {
 
     let (gcalendar_tx, worker_thread_rx) = tokio::sync::mpsc::channel::<CalendarCommands>(200);
 
-    let g_client = GCalendar::new(pool.clone(), update_calendar_tx)
+    GCalendar::new(pool.clone(), update_calendar_tx)
         .await
         .expect("Unable to connect to google calendar")
         .init_threads(worker_thread_rx);

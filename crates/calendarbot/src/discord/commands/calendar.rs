@@ -35,7 +35,7 @@ pub async fn new(
         .select(guilds_calendars::channelid)
         .first::<String>(&mut db);
 
-    if let Ok(_) = res {
+    if res.is_ok() {
         let _ = ctx.reply("This channel already has a calendar").await?;
         return Ok(());
     }
@@ -46,10 +46,7 @@ pub async fn new(
         .select(calendars::id)
         .first::<i32>(&mut db);
 
-    let check_if_valid = match res {
-        Ok(_) => false,
-        Err(_) => true,
-    };
+    let check_if_valid = res.is_err();
 
     let db_cal_id = match res {
         Ok(id) => Some(id),

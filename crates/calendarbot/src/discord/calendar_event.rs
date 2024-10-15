@@ -171,12 +171,12 @@ impl Discord {
         for ((start_date, end_date), events) in sorted.iter() {
             let mut field = String::new();
             for event in events {
-                if let None = event.start {
+                if event.start.is_none() {
                     warn!("Event start is None");
                     continue;
                 };
 
-                if let None = event.end {
+                if event.end.is_none() {
                     warn!("Event end is None");
                     continue;
                 };
