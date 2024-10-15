@@ -72,5 +72,8 @@ jobs:
       - 
         name: Build env
         run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
+      - 
+        name: Print version
+        run: echo ${{ needs.get-version.outputs.version }}
 
 

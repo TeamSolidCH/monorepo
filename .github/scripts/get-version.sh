@@ -8,7 +8,7 @@ if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
 	echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 else
 	echo "Run for pull_request" 
-	branch_name=$(echo ${BRANCH_NAME#*-} | cut -c -10)
+	branch_name=$(echo ${BRANCH_NAME} | cut -c -10)
 	echo "Got pre-release: $branch_name" 
 	expected_version="$LAST_TAG-$branch_name"
 	echo "Checking if there is already a tag"
