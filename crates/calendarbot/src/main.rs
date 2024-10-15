@@ -12,12 +12,13 @@ pub mod models;
 pub mod schema;
 pub mod types;
 
-use crate::events::{UpdateCalendarEvent, VerifyCalendarEvent};
-use crate::gcalendar::{GCalendar, GCalendarChannelReceivers, GCalendarChannelSenders};
+use crate::events::UpdateCalendarEvent;
+use crate::gcalendar::GCalendar;
 use anyhow::Error;
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
+use events::CalendarCommands;
 use poise::serenity_prelude as serenity;
 use std::env;
 
@@ -50,15 +51,14 @@ async fn main() {
     let (update_calendar_tx, update_calendar_rx) =
         tokio::sync::mpsc::channel::<UpdateCalendarEvent>(200);
 
-    let (verify_calendar_tx, verify_calendar_rx) =
-        tokio::sync::mpsc::channel::<VerifyCalendarEvent>(200);
+    let (gcalendar_tx, worker_thread_rx) = tokio::sync::mpsc::channel::<CalendarCommands>(200);
 
-    let g_client = GCalendar::new(pool.clone(), GCalendarChannelSenders { update_calendar_tx })
+    let g_client = GCalendar::new(pool.clone(), update_calendar_tx)
         .await
         .expect("Unable to connect to google calendar")
-        .init_threads(GCalendarChannelReceivers { verify_calendar_rx });
+        .init_threads(worker_thread_rx);
 
-    let data = types::Data::new(pool.clone(), g_client).expect("Unable to load config!");
+    let data = types::Data::new(pool.clone(), gcalendar_tx).expect("Unable to load config!");
 
     let mut client = discord::Discord::new(token, intents)
         .init(update_calendar_rx, data)

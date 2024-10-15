@@ -6,7 +6,7 @@ This is free software, and you are welcome to redistribute it
  */
 
 pub mod update_calendar_event;
-pub mod verify_calendar_id;
+pub mod worker_thread;
 
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
@@ -16,23 +16,13 @@ use google_calendar3::{hyper, hyper_rustls, oauth2, CalendarHub, Result};
 use std::collections::BTreeMap;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::events::UpdateCalendarEvent;
-use crate::events::VerifyCalendarEvent;
+use crate::events::{CalendarCommands, UpdateCalendarEvent};
 
 pub struct GCalendar {
     pub hub: CalendarHub<hyper_rustls::HttpsConnector<HttpConnector>>,
     pub db: Pool<ConnectionManager<PgConnection>>,
     events_cache: BTreeMap<String, Vec<Event>>,
-    senders: GCalendarChannelSenders,
-}
-
-pub struct GCalendarChannelReceivers {
-    pub verify_calendar_rx: Receiver<VerifyCalendarEvent>,
-}
-
-#[derive(Clone)]
-pub struct GCalendarChannelSenders {
-    pub update_calendar_tx: Sender<UpdateCalendarEvent>,
+    calendar_update_tx: Sender<UpdateCalendarEvent>,
 }
 
 impl Clone for GCalendar {
@@ -41,7 +31,7 @@ impl Clone for GCalendar {
             hub: self.hub.clone(),
             db: self.db.clone(),
             events_cache: self.events_cache.clone(),
-            senders: self.senders.clone(),
+            calendar_update_tx: self.calendar_update_tx.clone(),
         }
     }
 }
@@ -49,7 +39,7 @@ impl Clone for GCalendar {
 impl GCalendar {
     pub async fn new(
         db: Pool<ConnectionManager<PgConnection>>,
-        senders: GCalendarChannelSenders,
+        calendar_update_tx: Sender<UpdateCalendarEvent>,
     ) -> Result<GCalendar> {
         let env = std::env::var("GOOGLE_CALENDAR_SERVICE_FILE")
             .expect("GOOGLE_CALENDAR_SERVICE_FILE not set");
@@ -77,12 +67,12 @@ impl GCalendar {
             db,
             hub,
             events_cache: BTreeMap::new(),
-            senders,
+            calendar_update_tx,
         })
     }
 
-    pub fn init_threads(self, receivers: GCalendarChannelReceivers) -> Self {
+    pub fn init_threads(self, worker_thread_rx: Receiver<CalendarCommands>) -> Self {
         self.new_update_calendars_thread()
-            .new_verify_calendar_id_thread(receivers.verify_calendar_rx)
+            .new_worker_thread(worker_thread_rx)
     }
 }

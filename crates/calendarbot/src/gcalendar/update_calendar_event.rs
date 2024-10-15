@@ -22,7 +22,7 @@ impl GCalendar {
             loop {
                 self_clone.update_calendars().await;
                 trace!("Updated calendars");
-                thread::sleep(Duration::from_secs(60));
+                tokio::time::sleep(Duration::from_secs(10)).await;
             }
         });
         self
@@ -44,10 +44,12 @@ impl GCalendar {
             .expect("Unable to get calendars");
 
         for calendar in db_calendars {
+            trace!("Updating calendar: {}", calendar.googleid);
             let cal_id = calendar.googleid.clone();
-            let sender = self.senders.update_calendar_tx.clone();
+            let sender = self.calendar_update_tx.clone();
             let events = self
                 .hub
+                .clone()
                 .events()
                 .list(&cal_id)
                 .time_min(chrono::Utc::now())

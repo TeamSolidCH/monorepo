@@ -10,7 +10,9 @@ use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
 use poise::serenity_prelude as serenity;
 use std::env;
+use tokio::sync::mpsc::Sender;
 
+use crate::events::CalendarCommands;
 use crate::gcalendar::GCalendar;
 
 pub struct Data {
@@ -18,13 +20,13 @@ pub struct Data {
     pub client_id: serenity::UserId,
     pub bot_start_time: std::time::Instant,
     pub db: Pool<ConnectionManager<PgConnection>>,
-    pub g_calendar: GCalendar,
+    pub gcalendar_tx: Sender<CalendarCommands>,
 }
 
 impl Data {
     pub fn new(
         db_connection: Pool<ConnectionManager<PgConnection>>,
-        g_calendar: GCalendar,
+        gcalendar_tx: Sender<CalendarCommands>,
     ) -> Result<Data> {
         Ok(Self {
             application_id: env::var("APPLICATION_ID")
@@ -37,7 +39,7 @@ impl Data {
                 .into(),
             bot_start_time: std::time::Instant::now(),
             db: db_connection,
-            g_calendar,
+            gcalendar_tx,
         })
     }
 }

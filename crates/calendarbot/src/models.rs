@@ -13,8 +13,8 @@ use diesel::prelude::*;
 pub struct Calendar {
     pub id: i32,
     pub googleid: String,
-    pub timezone: Option<String>,
-    pub pollinterval: Option<i32>,
+    pub timezone: String,
+    pub pollinterval: i32,
 }
 
 #[derive(Identifiable, Queryable, Selectable, Associations, Debug)]

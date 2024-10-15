@@ -6,8 +6,8 @@ diesel::table! {
         #[max_length = 90]
         googleid -> Varchar,
         #[max_length = 30]
-        timezone -> Nullable<Varchar>,
-        pollinterval -> Nullable<Int4>,
+        timezone -> Varchar,
+        pollinterval -> Int4,
     }
 }
 
