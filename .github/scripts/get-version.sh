@@ -8,12 +8,11 @@ if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
 	echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 else
 	echo "Run for pull_request" 
-	echo ${{ github.event.pull_request.head.ref }}
-	branch_name=$(echo ${${{ github.event.pull_request.head.ref }}#*-} | cut -c -10)
-	echo "Got pre-release: $branch_name.0" 
-	expected_version="${{ steps.previoustag.ouputs.tag }}-$branch_name"
+	branch_name=$(echo ${$BRANCH_NAME#*-} | cut -c -10)
+	echo "Got pre-release: $branch_name" 
+	expected_version="$LAST_TAG-$branch_name"
 	echo "Checking if there is already a tag"
-	RAW=$(curl -H "Authorization: Bearer $GH_TOKEN" -s --fail "https://ghcr.io/v2/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}/tags/list")
+	RAW=$(curl -H "Authorization: Bearer $GH_TOKEN" -s --fail "https://ghcr.io/v2/$REPOSITORY_NAME/$IMAGE_NAME/tags/list")
 	if [ $? -ne 0 ]; then
 		echo "No tags found defaulting to 1"
 		VERSION="$expected_version.$NEW_VERSION"

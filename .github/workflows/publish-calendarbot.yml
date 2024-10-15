@@ -42,6 +42,10 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          LAST_TAG: ${{ steps.previoustag.ouputs.tag }}
+          REPOSITORY_NAME: ${{ env.REPOSITORY_NAME }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: bash .github/scripts/get-version.sh
   build-deploy:
     name: Build & Publish
