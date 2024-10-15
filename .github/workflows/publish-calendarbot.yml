@@ -1,13 +1,13 @@
 name: 🚀 Publish calendarbot
 on:
   pull_request:
-    paths:
-      - './crates/calendarbot'
-      - './Cargo.toml'
-      - './Cargo.lock'
-      - './.moon/'
-      - './flake.nix'
-      - './flake.lock'
+    # paths: UNCOMMENT WHEN IT IS WORKING
+    #   - './crates/calendarbot'
+    #   - './Cargo.toml'
+    #   - './Cargo.lock'
+    #   - './.moon/'
+    #   - './flake.nix'
+    #   - './flake.lock'
   push:
     tags:
       - calendarbot/v**
