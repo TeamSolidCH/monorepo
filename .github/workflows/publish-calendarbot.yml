@@ -21,36 +21,12 @@ env:
   REPOSITORY_NAME: teamsolidch
 
 jobs:
-  build-deploy:
-    name: Build & Publish
+  get-version:
+    name: Get version
     runs-on: ubuntu-24.04
+    outputs: 
+      version: ${{ steps.version.output.VERSION }}
     steps:
-      -
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      -
-        name: 'Get Previous tag'
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
-        with:
-          fallback: 0.0.0
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - 
-        uses: cachix/install-nix-action@v26
-      -
-        uses: cachix/cachix-action@v14
-        with:
-          name: yoyozbi-ci-cache
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      - 
-        name: Build env
-        run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
       - name: Get version
         id: version
         env:
@@ -97,5 +73,36 @@ jobs:
              VERSION="$expected_version.$NEW_VERSION"
              echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           fi
+  build-deploy:
+    name: Build & Publish
+    needs: [get-version]
+    runs-on: ubuntu-24.04
+    steps:
+      -
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      -
+        name: 'Get Previous tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        with:
+          fallback: 0.0.0
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - 
+        uses: cachix/install-nix-action@v26
+      -
+        uses: cachix/cachix-action@v14
+        with:
+          name: yoyozbi-ci-cache
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - 
+        name: Build env
+        run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
 
 
