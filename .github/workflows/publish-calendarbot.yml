@@ -53,6 +53,8 @@ jobs:
         run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
       - name: Get version
         id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           push_string="push"
           if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
@@ -64,11 +66,11 @@ jobs:
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "Run for pull_request" 
-            branch_name=$($(echo ${GITHUB_REF_NAME#*-} | cut -c -10)
+            branch_name=$(echo ${GITHUB_REF_NAME#*-} | cut -c -10)
             echo "Got pre-release: $branch_name.0" 
             expected_version="${{ steps.previoustag.ouputs.tag }}-$branch_name"
             echo "Checking if there is already a tag"
-            TAGS=$(curl -s "https://ghcr.io/v2/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}/tags/list" | jq -r '.tags[]')
+            TAGS=$(curl -H "Authorization: Bearer $GH_TOKEN" -s "https://ghcr.io/v2/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}/tags/list" | jq -r '.tags[]')
             FILTERED_TAGS=$(echo "$TAGS" | grep -E "^$expected_version.[0-9]+$")
             
             # Check if any filtered tags were found
