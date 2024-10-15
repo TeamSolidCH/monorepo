@@ -16,6 +16,7 @@ else
 	if [ $? -ne 0 ]; then
 		echo "No tags found defaulting to 1"
 		VERSION="$expected_version.$NEW_VERSION"
+		echo "Got version: $VERSION"
 		echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 		exit 0
 	fi
@@ -37,6 +38,7 @@ else
 		# Increment the version number
 		NEW_VERSION=$((VERSION + 1))
 	fi
+	 echo "Got version: $VERSION"
 	 VERSION="$expected_version.$NEW_VERSION"
 	 echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 fi
