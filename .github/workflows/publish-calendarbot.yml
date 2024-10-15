@@ -27,7 +27,18 @@ jobs:
     outputs: 
       version: ${{ steps.version.output.VERSION }}
     steps:
-      - name: Get version
+      -
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      -
+        name: 'Get Previous tag'
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        with:
+          fallback: 0.0.0
+      - 
+        name: Get version
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -82,12 +93,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      -
-        name: 'Get Previous tag'
-        id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
-        with:
-          fallback: 0.0.0
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
