@@ -53,8 +53,8 @@ jobs:
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "Run for pull_request" 
-            echo ${{ github.event.pull_request.base.ref }}
-            branch_name=$(echo ${${{ github.event.pull_request.base.ref }}#*-} | cut -c -10)
+            echo ${{ github.event.pull_request.head.ref }}
+            branch_name=$(echo ${${{ github.event.pull_request.head.ref }}#*-} | cut -c -10)
             echo "Got pre-release: $branch_name.0" 
             expected_version="${{ steps.previoustag.ouputs.tag }}-$branch_name"
             echo "Checking if there is already a tag"
