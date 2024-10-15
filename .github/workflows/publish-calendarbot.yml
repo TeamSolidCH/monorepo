@@ -25,7 +25,7 @@ jobs:
     name: Get version
     runs-on: ubuntu-24.04
     outputs: 
-      version: ${{ steps.version.output.VERSION }}
+      version: ${{ steps.version.outputs.VERSION }}
     steps:
       -
         uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
-          LAST_TAG: ${{ steps.previoustag.ouputs.tag }}
+          LAST_TAG: ${{ steps.previoustag.outputs.tag }}
           REPOSITORY_NAME: ${{ env.REPOSITORY_NAME }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: bash .github/scripts/get-version.sh
