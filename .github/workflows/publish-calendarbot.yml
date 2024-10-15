@@ -71,7 +71,7 @@ jobs:
             expected_version="${{ steps.previoustag.ouputs.tag }}-$branch_name"
             echo "Checking if there is already a tag"
             TAGS=$(curl -H "Authorization: Bearer $GH_TOKEN" -s --fail "https://ghcr.io/v2/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}/tags/list" | jq -r '.tags[]')
-            if [ $? -ne 0]; then
+            if [ $? -ne 0 ]; then
               echo "No tags found defaulting to 1"
               VERSION="$expected_version.$NEW_VERSION"
               echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
