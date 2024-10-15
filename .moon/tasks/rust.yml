@@ -47,3 +47,12 @@ tasks:
     inputs:
       - '@globs(sources)'
     outputs: ['target/release/calendarbot']
+
+fileGroups:
+  sources:
+    - 'crates/*/src/**/*'
+    - 'crates/*/Cargo.toml'
+    - 'Cargo.toml'
+  tests:
+    - 'crates/*/benches/**/*'
+    - 'crates/*/tests/**/*'
