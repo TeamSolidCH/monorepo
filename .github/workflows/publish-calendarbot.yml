@@ -58,7 +58,7 @@ jobs:
             echo "Got pre-release: $branch_name.0" 
             expected_version="${{ steps.previoustag.ouputs.tag }}-$branch_name"
             echo "Checking if there is already a tag"
-            TAGS=$(curl -H "Authorization: Bearer $GH_TOKEN" -s --fail "https://ghcr.io/v2/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}/tags/list" | jq -r '.tags[]')
+            RAW=$(curl -H "Authorization: Bearer $GH_TOKEN" -s --fail "https://ghcr.io/v2/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}/tags/list")
             if [ $? -ne 0 ]; then
               echo "No tags found defaulting to 1"
               VERSION="$expected_version.$NEW_VERSION"
@@ -66,6 +66,8 @@ jobs:
               exit 0
             fi
 
+            TAGS=$( $RAW | jq -r '.tags[]')
+         
             FILTERED_TAGS=$(echo "$TAGS" | grep -E "^$expected_version.[0-9]+$")
             
             # Check if any filtered tags were found
