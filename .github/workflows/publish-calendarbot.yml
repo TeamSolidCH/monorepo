@@ -72,6 +72,13 @@ jobs:
       - 
         name: Build env
         run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
+      -
+        name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - 
         name: Print version
         run: echo "${{ needs.get-version.outputs.version }}"

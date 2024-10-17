@@ -13,7 +13,7 @@ RUN moon docker scaffold calendarbot
 
 #### BUILD
 FROM base AS build
-RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev=15.6-0+deb12u1
+RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev
 # Copy toolchain
 COPY --from=skeleton /root/.proto /root/.proto
 
@@ -28,7 +28,7 @@ RUN moon docker prune
 FROM debian:trixie-slim
 WORKDIR /app
 
-RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev=16.2-1 \
+RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev\
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
