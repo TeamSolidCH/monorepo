@@ -13,17 +13,20 @@ RUN moon docker scaffold calendarbot
 
 #### BUILD
 FROM base AS build
+
+WORKDIR /app
+
 RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev
 # Copy toolchain
 COPY --from=skeleton /root/.proto /root/.proto
 
 # Copy workspace skeleton
 COPY --from=skeleton /app/.moon/docker/workspace .
+COPY --from=skeleton /app/.moon/docker/sources .
 
 # Install toolchain and dependencies
 RUN moon docker setup
-RUN moon run calendarbot:build
-RUN moon docker prune
+RUN moon run calendarbot:buildRelease
 
 FROM debian:trixie-slim
 WORKDIR /app

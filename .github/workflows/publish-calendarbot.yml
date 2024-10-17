@@ -83,4 +83,12 @@ jobs:
         name: Print version
         run: echo "${{ needs.get-version.outputs.version }}"
 
+      - name: Build & publish
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          platforms: linux/amd64,linux/arm64
+          file: crates/calendarbot/Dockerfile
+          tags: ghcr.io/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:${{ needs.get-version.outputs.version }}
+
 
