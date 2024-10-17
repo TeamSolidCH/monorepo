@@ -91,6 +91,7 @@ jobs:
         with:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          file: crates/calendarbot/Dockerfile
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }},push-by-digest=true,name-canonical=true,push=true
       
       - name: Export digest
