@@ -51,6 +51,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs:
+      - get-version
     strategy:
       fail-fast: false
       matrix:
@@ -89,6 +91,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           file: crates/calendarbot/Dockerfile
+          tags: ${{ env.REGISTRY_NAME }}:${{ needs.get-version.outputs.version }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
       
       - name: Export digest
@@ -109,7 +112,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-      - get-version
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -136,7 +138,7 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)          
       
       - name: Inspect image
