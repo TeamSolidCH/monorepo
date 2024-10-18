@@ -42,11 +42,8 @@ jobs:
         name: Get version
         id: version
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.number }}
           LAST_TAG: ${{ steps.previoustag.outputs.tag }}
-          REPOSITORY_NAME: ${{ env.REPOSITORY_NAME }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: bash .github/scripts/get-version.sh
 
   build:
@@ -91,7 +88,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           file: crates/calendarbot/Dockerfile
-          tags: ${{ env.REGISTRY_NAME }}:${{ needs.get-version.outputs.version }}
+          tags: ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
       
       - name: Export digest
