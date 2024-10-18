@@ -1,4 +1,4 @@
-FROM node:latest AS base
+FROM node:22.10.0-slim AS base
 WORKDIR /app
 
 # Install moon binary
