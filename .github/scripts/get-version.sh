@@ -8,9 +8,8 @@ if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
 	echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 else
 	echo "Run for pull_request" 
-	branch_name=$(echo ${BRANCH_NAME} | cut -c -15)
-	echo "Got pre-release: $branch_name" 
-	expected_version="$LAST_TAG-$branch_name"
+	echo "Got pre-release: pr-$PR_NUMBER"
+	expected_version="$LAST_TAG-pr-$PR_NUMBER"
 	echo "Checking if there is already a tag"
 	RAW=$(curl -H "Authorization: Bearer $GH_TOKEN" -s --fail "https://ghcr.io/v2/$REPOSITORY_NAME/$IMAGE_NAME/tags/list")
 	if [ $? -ne 0 ]; then
@@ -33,13 +32,13 @@ else
 		# Find the latest tag with the highest version number
 		LATEST_TAG=$(echo "$FILTERED_TAGS" | sort -V | tail -n 1)
 		# Extract the version number from the latest tag
-		VERSION=$(echo $LATEST_TAG | sed "s/^$expected_version.\([0-9]*\)$/\1/")
+		number=$(echo $LATEST_TAG | sed "s/^$expected_version.\([0-9]*\)$/\1/")
 
 		# Increment the version number
-		NEW_VERSION=$((VERSION + 1))
+		NEW_VERSION=$((number + 1))
 	fi
-	 echo "Got version: $VERSION"
 	 VERSION="$expected_version.$NEW_VERSION"
+	 echo "Got version: $VERSION"
 	 echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 fi
 

@@ -43,7 +43,7 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.number }}
           LAST_TAG: ${{ steps.previoustag.outputs.tag }}
           REPOSITORY_NAME: ${{ env.REPOSITORY_NAME }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
