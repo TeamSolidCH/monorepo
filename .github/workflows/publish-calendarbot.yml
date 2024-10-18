@@ -18,8 +18,8 @@ concurrency:
 
 env:
   IMAGE_NAME: calendarbot
-  REPOSITORY_NAME: teamsolidch
-  REGISTRY_IMAGE: ghcr.io/teamsolidch/calendarbot
+  REPOSITORY_NAME: TeamSolidCH
+  REGISTRY_IMAGE: ghcr.io/TeamSolidCH/calendarbot
 
 jobs:
   get-version:
