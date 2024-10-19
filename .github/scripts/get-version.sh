@@ -9,10 +9,10 @@ if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
 else
 	echo "Run for pull_request" 
 	echo "Got pre-release: pr-$PR_NUMBER"
-	last_tag = $(git describe --tags --abbrev=0 --match="calendarbot/*")
+	last_tag=$(git describe --tags --abbrev=0 --match="calendarbot/*")
 	if [ -z "$last_tag" ]; then
 		echo "No tags found defaulting to calendarbot/0.0.1"
-		last_tag = "calendarbot/0.0.1"
+		last_tag="calendarbot/0.0.1"
 	fi
 	VERSION="$(echo $last_tag | rev | cut -d'/' -f1 | rev)-pr-$PR_NUMBER"
 	echo "Got version: $VERSION"
