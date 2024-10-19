@@ -1,43 +1,25 @@
-FROM node:latest AS base
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
-# Install moon binary
-RUN npm install -g @moonrepo/cli
+FROM chef AS planner
+COPY ./Cargo.lock ./Cargo.toml crates/calendarbot ./
+RUN cargo chef prepare --recipe-path recipe.json
 
-#### SKELETON
-FROM base AS skeleton
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+# Build dependencies - this is the caching Docker layer!
+RUN cargo chef cook --release --recipe-path recipe.json
+# Build application
+COPY ./Cargo.lock ./Cargo.toml crates/calendarbot ./
+RUN cargo build --release --bin calendarbot
 
-# Copy entire repository and scaffold
-COPY . .
-RUN moon docker scaffold calendarbot
-
-#### BUILD
-FROM base AS build
-
-WORKDIR /app
-
-RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev
-# Copy toolchain
-COPY --from=skeleton /root/.proto /root/.proto
-
-# Copy workspace skeleton
-COPY --from=skeleton /app/.moon/docker/workspace .
-COPY --from=skeleton /app/.moon/docker/sources .
-
-# Install toolchain and dependencies
-RUN moon docker setup
-RUN moon run calendarbot:buildRelease
-
-FROM debian:trixie-slim
-WORKDIR /app
-
-RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev\
+# We do not need the Rust toolchain to run the binary!
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev=15.8-0+deb12u1 \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
-RUN useradd -u 1000 runner
-USER runner
-
-COPY --from=build /app/target/release/calendarbot .
-
-ENTRYPOINT ["/app/calendarbot"]
+WORKDIR /app
+COPY --from=builder /app/target/release/calendarbot /usr/local/bin
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+ENTRYPOINT ["/usr/local/bin/calendarbot"]

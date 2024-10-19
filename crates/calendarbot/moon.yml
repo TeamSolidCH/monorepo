@@ -4,4 +4,3 @@ type: 'application'
 env:
   CARGO_TERM_COLOR: 'always'
 
-
