@@ -15,8 +15,8 @@ pub mod types;
 use crate::events::UpdateCalendarEvent;
 use crate::gcalendar::GCalendar;
 use anyhow::Error;
-use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool};
+use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
 use events::CalendarCommands;
 use poise::serenity_prelude as serenity;
@@ -29,11 +29,10 @@ type ApplicationContext<'a> = poise::ApplicationContext<'a, types::Data, Error>;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
-pub fn get_connection_pool(database_url: String) -> Pool<ConnectionManager<PgConnection>> {
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-    Pool::builder()
-        .test_on_check_out(true)
-        .build(manager)
+pub async fn get_connection_pool(database_url: String) -> Pool<diesel_async::AsyncPgConnection> {
+    let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
+    Pool::builder(config)
+        .build()
         .expect("Failed to create pool.")
 }
 
@@ -43,7 +42,7 @@ async fn main() {
     env_logger::init();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = get_connection_pool(database_url);
+    let pool = get_connection_pool(database_url).await;
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not found");
     let intents = serenity::GatewayIntents::non_privileged();

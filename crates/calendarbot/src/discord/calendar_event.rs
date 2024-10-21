@@ -12,8 +12,9 @@ use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
 use anyhow::Result;
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::PgConnection;
+use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::AsyncPgConnection;
+use diesel_async::RunQueryDsl;
 use google_calendar3::api::Event;
 use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
 use log::{debug, error, warn};
@@ -64,11 +65,11 @@ impl Discord {
     pub(crate) fn calendar_events_thread(
         mut calendar_rx: mpsc::Receiver<UpdateCalendarEvent>,
         cache: Arc<Mutex<Option<LocalCache>>>,
-        db: Pool<ConnectionManager<PgConnection>>,
+        db: Pool<AsyncPgConnection>,
     ) {
         //TODO: Find a better way to handle new events (maybe a threadpool)
         tokio::spawn(async move {
-            let db = db.get();
+            let db = db.get().await;
             if let Err(e) = db {
                 error!("Unable to get db connection from poolmanager: {:?}", e);
                 return;
@@ -111,6 +112,7 @@ impl Discord {
                                     .filter(calendars::googleid.eq(event.calendar_id.clone()))
                                     .select(calendars::id)
                                     .first::<i32>(&mut db)
+                                    .await
                                     .expect("Unable to get calendar id from database");
 
                                 diesel::update(guilds_calendars::guilds_calendars)
@@ -121,6 +123,7 @@ impl Discord {
                                     )
                                     .set(guilds_calendars::messageid.eq(msg_id.get().to_string()))
                                     .execute(&mut db)
+                                    .await
                                     .expect("Unable to update message id in database");
                             }
                         }
