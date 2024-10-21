@@ -86,7 +86,7 @@ jobs:
         run: sudo apt install -y gcc-aarch64-linux-gnu
 
       - name: Build release artifact
-        id: build
+        id: build-rust
         run: |
           if [[ "${{ matrix.rust_target }}" == "aarch64-unknown-linux-gnu" ]]; then 
                 cargo build --release --target aarch64-unknown-linux-gnu 
@@ -102,7 +102,7 @@ jobs:
         with:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: TARGETDIR=${{ steps.build.outputs.path }}
+          build-args: TARGETDIR=${{ steps.build-rust.outputs.path }}
           file: crates/calendarbot/Dockerfile
           cache-from: type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
           cache-to: type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }},mode=max
