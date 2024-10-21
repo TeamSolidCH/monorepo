@@ -2,7 +2,7 @@ name: 🚀 Publish calendarbot
 on:
   pull_request:
     # paths: UNCOMMENT WHEN IT IS WORKING
-    #   - './crates/calendarbot'
+    #   - './crates/calendarbot/**'
     #   - './Cargo.toml'
     #   - './Cargo.lock'
   push:
@@ -11,7 +11,7 @@ on:
     branches:
       - master
     paths:
-      - './crates/calendarbot'
+      - './crates/calendarbot/**'
       - './Cargo.toml'
       - './Cargo.lock'
 
@@ -41,7 +41,6 @@ jobs:
         id: version
         env:
           PR_NUMBER: ${{ github.event.number }}
-          LAST_TAG: ${{ steps.previoustag.outputs.tag }}
         run: bash .github/scripts/get-version.sh
 
   build:
@@ -162,17 +161,14 @@ jobs:
         if: steps.latest.outputs.tag_latest != 'true'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \ 
-            -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Create manifest list and push (latest)
         if: steps.latest.outputs.tag_latest == 'true'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \ 
-            -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
-            -t ${{ env.REGISTRY_IMAGE }}:latest \
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} -t ${{ env.REGISTRY_IMAGE }}:latest \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       
