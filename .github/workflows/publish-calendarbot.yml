@@ -118,14 +118,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get is latest
-        id: latest
-        run: echo "tag_latest=$TAG_LATEST" >> $GITHUB_OUTPUT
-        env:
-          TAG_LATEST: ${{ needs.get-version.outputs.tag_latest }}
       
       - name: Create manifest list and push
-        if: steps.latest.outputs.tag_latest != 'true'
+        if: needs.get-version.outputs.tag_latest != 'true'
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \ 
@@ -133,7 +128,7 @@ jobs:
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Create manifest list and push (latest)
-        if: steps.latest.outputs.tag_latest == 'true'
+        if: needs.get-version.outputs.tag_latest == 'true'
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \ 
