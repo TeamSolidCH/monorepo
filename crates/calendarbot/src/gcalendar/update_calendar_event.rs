@@ -71,11 +71,12 @@ impl GCalendar {
 
             let do_match = matching == new_events.len() && matching == cached_events.len();
             trace!(
-                "matching: {} == {} && {} == {}",
+                "matching: ({} == {} && {} == {}) = {}",
                 matching,
                 new_events.len(),
                 matching,
-                cached_events.len()
+                cached_events.len(),
+                do_match
             );
 
             let mut guild_calendars = GuildCalendar::belonging_to(&calendar)
@@ -88,7 +89,7 @@ impl GCalendar {
                 .iter()
                 .any(|guild_calendar| guild_calendar.forceupdate);
 
-            if do_match && !cached_events.is_empty() && !forced_update {
+            if do_match && !forced_update {
                 debug!("No new events");
                 continue;
             }
