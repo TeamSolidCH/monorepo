@@ -6,12 +6,36 @@ COPY ./Cargo.lock ./Cargo.toml crates/calendarbot ./
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
+ARG TARGETARCH
+ARG TARGETOS
+RUN if [ "$TARGETOS" = "linux" ]; then \
+  if [ "$TARGETARCH" = "arm64" ]; then \
+      export RUST_TARGET="aarch64-unknown-linux-gnu"; \
+  elif [ "$TARGETARCH" = "amd64" ]; then \
+      export RUST_TARGET="x86_64-unknown-linux-gnu"; \
+  else \
+      echo "Unsupported architecture: $TARGETARCH"; \
+      exit 1; \
+  fi; \
+elif [ "$TARGETOS" = "windows" ]; then \
+  if [ "$TARGETARCH" = "amd64" ]; then \
+      export RUST_TARGET="x86_64-pc-windows-msvc"; \
+  else \
+      echo "Unsupported architecture: $TARGETARCH"; \
+      exit 1; \
+  fi; \
+else \
+  echo "Unsupported OS: $TARGETOS"; \
+  exit 1; \
+fi
+
 COPY --from=planner /app/recipe.json recipe.json
+RUN rustup target add $TARGETARCH
 # Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json --target $TARGETARCH
 # Build application
 COPY ./Cargo.lock ./Cargo.toml crates/calendarbot ./
-RUN cargo build --release --bin calendarbot
+RUN cargo build --release --bin calendarbot --target $TARGETARCH
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
