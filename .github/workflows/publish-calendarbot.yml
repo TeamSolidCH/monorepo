@@ -101,7 +101,12 @@ jobs:
               cargo build --release --bin calendarbot
               echo "path=./target/release/calendarbot" >> $GITHUB_OUTPUT
           fi
-      
+      - name: ls target
+        run: | 
+            ls
+            ls target
+            ls target/release
+            ls target/aarch64-unknown-linux-gnu/release
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v6
