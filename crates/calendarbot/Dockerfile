@@ -30,9 +30,9 @@ else \
 fi
 
 COPY --from=planner /app/recipe.json recipe.json
-RUN rustup target add $TARGETARCH
+RUN rustup target add $RUST_TARGET
 # Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json --target $TARGETARCH
+RUN cargo chef cook --release --recipe-path recipe.json --target $RUST_TARGET
 # Build application
 COPY ./Cargo.lock ./Cargo.toml crates/calendarbot ./
 RUN cargo build --release --bin calendarbot --target $TARGETARCH
