@@ -11,6 +11,7 @@ use crate::events::UpdateCalendarEvent;
 use crate::models::{Calendar, GuildCalendar};
 use crate::schema::guilds_calendars;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use google_calendar3::{api::Event, chrono};
 use log::{debug, error, trace, warn};
 use std::time::Duration;
@@ -29,7 +30,7 @@ impl GCalendar {
     }
 
     async fn update_calendars(&mut self) {
-        let db = &mut self.db.clone().get();
+        let db = &mut self.db.clone().get().await;
         if let Err(e) = db {
             warn!("Unable to clone db: {:?}", e);
             return;
@@ -41,6 +42,7 @@ impl GCalendar {
         let db_calendars = calendars
             .select(Calendar::as_select())
             .load(db)
+            .await
             .expect("Unable to get calendars");
 
         for calendar in db_calendars {
@@ -79,6 +81,7 @@ impl GCalendar {
             let mut guild_calendars = GuildCalendar::belonging_to(&calendar)
                 .select(GuildCalendar::as_select())
                 .load(db)
+                .await
                 .expect("Unable to get channel and message ids");
 
             let forced_update = guild_calendars
@@ -140,7 +143,8 @@ impl GCalendar {
             if forced_update {
                 let res = diesel::update(GuildCalendar::belonging_to(&calendar))
                     .set(guilds_calendars::forceupdate.eq(false))
-                    .execute(db);
+                    .execute(db)
+                    .await;
 
                 if let Err(e) = res {
                     error!("Unable to change forceUpdate to false: {}", e);

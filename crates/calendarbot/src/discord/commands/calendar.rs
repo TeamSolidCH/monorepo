@@ -11,6 +11,7 @@ use crate::schema::guilds_calendars::dsl as guilds_calendars;
 use crate::ApplicationContext;
 use anyhow::Result;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use poise::serenity_prelude::{self as serenity};
 use tokio::sync::oneshot;
 
@@ -27,13 +28,14 @@ pub async fn new(
         None => ctx.guild_channel().await.unwrap(),
     };
 
-    let mut db = ctx.data().db.get().unwrap();
+    let mut db = ctx.data().db.get().await.unwrap();
 
     // Checking if the channel as calendar
     let res = guilds_calendars::guilds_calendars
         .filter(guilds_calendars::channelid.eq(channel.id.get().to_string()))
         .select(guilds_calendars::channelid)
-        .first::<String>(&mut db);
+        .first::<String>(&mut db)
+        .await;
 
     if res.is_ok() {
         let _ = ctx.reply("This channel already has a calendar").await?;
@@ -44,7 +46,8 @@ pub async fn new(
     let res = calendars::calendars
         .filter(calendars::googleid.eq(&calendar_id))
         .select(calendars::id)
-        .first::<i32>(&mut db);
+        .first::<i32>(&mut db)
+        .await;
 
     let check_if_valid = res.is_err();
 
@@ -80,7 +83,8 @@ pub async fn new(
     let res = guilds::guilds
         .filter(guilds::discordid.eq(guild_id.clone()))
         .select(guilds::id)
-        .first::<i32>(&mut db);
+        .first::<i32>(&mut db)
+        .await;
 
     let guild_id = match res {
         Ok(id) => id,
@@ -88,6 +92,7 @@ pub async fn new(
             .values(guilds::discordid.eq(guild_id))
             .returning(guilds::id)
             .get_result::<i32>(&mut db)
+            .await
             .expect("Unable to insert guild into database"),
     };
 
@@ -97,6 +102,7 @@ pub async fn new(
             .values(calendars::googleid.eq(&calendar_id))
             .returning(calendars::id)
             .get_result::<i32>(&mut db)
+            .await
             .expect("Unable to insert calendar into database"),
         Some(id) => id,
     };
@@ -109,6 +115,7 @@ pub async fn new(
             guilds_calendars::channelid.eq(channel.id.get().to_string()),
         ))
         .execute(&mut db)
+        .await
         .expect("Unable to insert guild_calendar into database");
 
     ctx.send(
