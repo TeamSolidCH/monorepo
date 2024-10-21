@@ -1,0 +1,8 @@
+.moon/cache
+.git/
+target/
+node_modules/
+.direnv/
+.devenv/
+Dockerfile
+.github/

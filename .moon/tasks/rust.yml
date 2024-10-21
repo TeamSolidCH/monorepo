@@ -46,7 +46,7 @@ tasks:
       runInCI: false
     inputs:
       - '@globs(sources)'
-    outputs: ['target/release/calendarbot']
+      
 
 fileGroups:
   sources:
