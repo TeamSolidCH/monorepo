@@ -94,6 +94,7 @@ jobs:
         id: build-rust
         run: |
           if [[ "${{ matrix.rust_target }}" == "aarch64-unknown-linux-gnu" ]]; then 
+                rustup target add aarch64-unknown-linux-gnu
                 cargo build --release --target aarch64-unknown-linux-gnu 
                 echo "path=target/aarch64-unknown-linux-gnu/release/calendarbot" >> $GITHUB_OUTPUT 
             else
