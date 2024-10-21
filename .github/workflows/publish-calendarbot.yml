@@ -81,6 +81,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          targets: ${{ matrix.rust_target }}
 
       - name: Setup caching
         uses: Swatinem/rust-cache@v2
