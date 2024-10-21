@@ -94,7 +94,6 @@ jobs:
         id: build-rust
         run: |
           if [[ "${{ matrix.rust_target }}" == "aarch64-unknown-linux-gnu" ]]; then 
-                rustup target add aarch64-unknown-linux-gnu
                 cargo build --release --target aarch64-unknown-linux-gnu --bin calendarbot 
                 echo "path=./target/aarch64-unknown-linux-gnu/release/calendarbot" >> $GITHUB_OUTPUT 
             else
@@ -103,7 +102,7 @@ jobs:
           fi
 
       - name: Sed dockerfile
-        run: sed -i 's/${TARGETDIR}/${{ steps.build-rust.outputs.path }}/g' crates/calendarbot/Dockerfile
+        run: sed -i 's\${TARGETDIR}\${{ steps.build-rust.outputs.path }}\g' crates/calendarbot/Dockerfile
 
       - name: Build and push by digest
         id: build
