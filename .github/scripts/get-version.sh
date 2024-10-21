@@ -19,6 +19,7 @@ if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
 		VERSION="$(echo $last_tag | rev | cut -d'/' -f1 | rev)-rc.$GITHUB_RUN_NUMBER"
 		echo "Got version: $VERSION"
 		echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+		echo "TAG_LATEST=false" >> $GITHUB_OUTPUT
 	fi
 elif [[ "$GITHUB_EVENT_NAME" == "$pull_request_string" ]]; then
 	echo "Run for pull_request" 
@@ -31,6 +32,7 @@ elif [[ "$GITHUB_EVENT_NAME" == "$pull_request_string" ]]; then
 	VERSION="$(echo $last_tag | rev | cut -d'/' -f1 | rev)-pr-$PR_NUMBER"
 	echo "Got version: $VERSION"
 	echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+	echo "TAG_LATEST=false" >> $GITHUB_OUTPUT
 else
 	echo "No event name found"
 	exit 1

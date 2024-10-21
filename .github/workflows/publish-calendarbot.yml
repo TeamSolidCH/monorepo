@@ -118,6 +118,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get is latest
+        id: latest
+        run: echo "tag_latest=$TAG_LATEST" >> $GITHUB_OUTPUT
+        env:
+          TAG_LATEST: ${{ needs.get-version.outputs.tag_latest }}
       
       - name: Create manifest list and push
         if: needs.get-version.outputs.tag_latest != "true"
