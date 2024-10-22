@@ -105,22 +105,22 @@ jobs:
         run: sed -i 's@<TARGETDIR>@${{ steps.build-rust.outputs.path }}@g' crates/calendarbot/Dockerfile
 
       - name: Build an push by digest
-        run: docker buildx build
-              --platform=${{ matrix.platform }}
-              --file=crates/calendarbot/Dockerfile
-              --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
-              --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
-              --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-              --output=type=digest,file=digest.txt .
-
-      - name: Get digest
-        id: digest
-        run: echo "digest=$(cat digest.txt)" >> $GITHUB_OUTPUT
+        id: build
+        run: |
+          digest=$(
+              docker buildx build \
+              --platform=${{ matrix.platform }}\
+              --file=crates/calendarbot/Dockerfile\
+              --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}\
+              --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}\
+              --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true\
+              --output=type=digest,file=digest.txt -q . | cut -d '@' -f 2-)
+          echo "digest=$digest" >> $GITHUB_OUTPUT
 
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          digest="${{ steps.digest.outputs.digest }}"
+          digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"          
       
       - name: Upload digest
