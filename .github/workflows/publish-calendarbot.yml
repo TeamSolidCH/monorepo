@@ -106,13 +106,12 @@ jobs:
 
       - name: Build an push by digest
         id: build
-        run: |
-              docker buildx build \
-              --platform=${{ matrix.platform }}\
-              --file=crates/calendarbot/Dockerfile\
-              --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}\
-              --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}\
-              --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true\
+        run:  docker buildx build
+              --platform=${{ matrix.platform }}
+              --file=crates/calendarbot/Dockerfile
+              --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
+              --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
+              --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
               --metadata-file metadata.json .
 
       - name: Export digest
