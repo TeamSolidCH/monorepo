@@ -5,6 +5,7 @@ on:
       - './crates/calendarbot/**'
       - './Cargo.toml'
       - './Cargo.lock'
+      - '.github/workflows/publish-calendarbot.yml'
   push:
     tags:
       - calendarbot/v**
@@ -14,6 +15,7 @@ on:
       - './crates/calendarbot/**'
       - './Cargo.toml'
       - './Cargo.lock'
+      - '.github/workflows/publish-calendarbot.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
