@@ -21,8 +21,10 @@ jobs:
           name: yoyozbi-ci-cache
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: 'Build env'
-        run: 'nix develop --impure --accept-flake-config --command bash -c "echo hello" #.'
-      - name: 'Run ci'
+        run: 'nix develop --impure --accept-flake-config --command bash -c "moon setup" #.'
+      - name: Cache rust
+        uses:  Swatinem/rust-cache@v2
+      - name: Run ci
         run: 'nix develop --impure --accept-flake-config --command bash -c "moon ci --color" #.'
       - uses: appthrust/moon-ci-retrospect@v1
         if: success() || failure()
