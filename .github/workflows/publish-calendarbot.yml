@@ -85,6 +85,8 @@ jobs:
 
       - name: Setup caching
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.rust_target }}
 
       - name: Install compiler tools (as we're cross-compiling)
         if: matrix.rust_target == 'aarch64-unknown-linux-gnu'
@@ -162,14 +164,14 @@ jobs:
         if: steps.latest.outputs.tag_latest != 'true'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
+          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Create manifest list and push (latest)
         if: steps.latest.outputs.tag_latest == 'true'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} -t ${{ env.REGISTRY_IMAGE }}:latest \
+          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} -t ${{ env.REGISTRY_IMAGE }}:latest \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       
