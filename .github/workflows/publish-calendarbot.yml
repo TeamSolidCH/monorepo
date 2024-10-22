@@ -93,8 +93,11 @@ jobs:
           key: ${{ matrix.rust_target }}
 
       - name: Install compiler tools (as we're cross-compiling)
-        if: matrix.rust_target == 'aarch64-unknown-linux-gnu'
+        if: matrix.rust_target == 'aarch64-unknown-linux-musl'
         run: sudo apt install -y gcc-aarch64-linux-gnu
+
+      - name: Install musl tools
+        run: sudo apt install -y musl-tools
 
       - name: Build release artifact
         id: build-rust
