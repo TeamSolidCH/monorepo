@@ -1,10 +1,10 @@
 name: 🚀 Publish calendarbot
 on:
   pull_request:
-    # paths: UNCOMMENT WHEN IT IS WORKING
-    #   - './crates/calendarbot/**'
-    #   - './Cargo.toml'
-    #   - './Cargo.lock'
+    paths:
+      - './crates/calendarbot/**'
+      - './Cargo.toml'
+      - './Cargo.lock'
   push:
     tags:
       - calendarbot/v**
