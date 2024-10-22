@@ -118,8 +118,8 @@ jobs:
         run: |
           mkdir -p /tmp/digests
           cat metadata.json
-          cat metadata.json | jq '.containerimage.digest'
-          digest="$(cat metadata.json | jq '.containerimage.digest')"
+          cat metadata.json | jq -r '."containerimage.digest"'
+          digest="$(cat metadata.json | jq -r '."containerimage.digest"')"
           touch "/tmp/digests/${digest#sha256:}"          
       
       - name: Upload digest
