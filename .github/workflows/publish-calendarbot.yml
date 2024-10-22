@@ -96,7 +96,7 @@ jobs:
         if: matrix.rust_target == 'aarch64-unknown-linux-musl'
         run: | 
           sudo apt-get install -y clang
-          bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
       - name: Install musl tools
         run: sudo apt install -y musl-tools
