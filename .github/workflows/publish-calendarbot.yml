@@ -95,7 +95,7 @@ jobs:
       - name: Install compiler tools (as we're cross-compiling)
         if: matrix.rust_target == 'aarch64-unknown-linux-musl'
         run: | 
-          sudo apt-get install -y gcc-13-aarch64-linux-gnu
+          sudo apt-get install -y musl-dev
 
       - name: Install musl tools
         run: sudo apt install -y musl-tools
