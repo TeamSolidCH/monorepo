@@ -94,7 +94,9 @@ jobs:
 
       - name: Install compiler tools (as we're cross-compiling)
         if: matrix.rust_target == 'aarch64-unknown-linux-musl'
-        run: sudo apt install -y gcc-aarch64-linux-gnu
+        run: | 
+          sudo apt install -y aarch64-linux-musl-gcc
+          bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
       - name: Install musl tools
         run: sudo apt install -y musl-tools
