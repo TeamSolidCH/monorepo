@@ -4,7 +4,7 @@ tasks:
   build:
     command: 'cargo build'
     options:
-      runInCI: true
+      runInCI: false
     inputs:
       - '@globs(sources)'
   dev:
@@ -36,7 +36,7 @@ tasks:
   test:
     command: 'cargo test --workspace'
     options:
-      runInCI: false
+      runInCI: true
     inputs:
       - '@globs(sources)'
       - '@globs(tests)'
