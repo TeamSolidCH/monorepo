@@ -117,6 +117,8 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
+          cat metadata.json
+          cat metadata.json | jq '.digest'
           digest="$(cat metadata.json | jq '.digest')"
           touch "/tmp/digests/${digest#sha256:}"          
       
