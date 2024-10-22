@@ -1,3 +1,4 @@
-FROM gcr.io/distroless/cc-debian12
-COPY <TARGETDIR> /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/calendarbot"]
+FROM gcr.io/distroless/static:debug-nonroot
+WORKDIR /
+COPY --chown=nonroot:nonroot target/x86_64-unknown-linux-musl/release/calendarbot /calendarbot
+ENTRYPOINT [ "/calendarbot" ]

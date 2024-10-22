@@ -53,9 +53,9 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            rust_target: x86_64-unknown-linux-gnu
+            rust_target: x86_64-unknown-linux-musl
           - platform: linux/arm64
-            rust_target: aarch64-unknown-linux-gnu
+            rust_target: aarch64-unknown-linux-musl
     runs-on: ubuntu-latest
     steps:
       -
@@ -99,13 +99,8 @@ jobs:
       - name: Build release artifact
         id: build-rust
         run: |
-          if [[ "${{ matrix.rust_target }}" == "aarch64-unknown-linux-gnu" ]]; then 
-                cargo build --release --target aarch64-unknown-linux-gnu --bin calendarbot 
-                echo "path=./target/aarch64-unknown-linux-gnu/release/calendarbot" >> $GITHUB_OUTPUT 
-            else
-              cargo build --release --bin calendarbot
-              echo "path=./target/release/calendarbot" >> $GITHUB_OUTPUT
-          fi
+          cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
+          echo "path=./target/${{ matrix.rust_target }}/release/calendarbot" >> $GITHUB_OUTPUT
 
       - name: Sed dockerfile
         run: sed -i 's@<TARGETDIR>@${{ steps.build-rust.outputs.path }}@g' crates/calendarbot/Dockerfile

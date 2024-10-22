@@ -8,6 +8,7 @@ services:
     volumes:
         - postgres-data:/var/lib/postgresql/data
   calendarbot:
+    #image: ghcr.io/teamsolidch/calendarbot:v0.0.1-pr-31
     image: calendarbot
     env_file: .env
     volumes:
