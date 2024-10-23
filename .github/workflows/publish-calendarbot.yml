@@ -104,7 +104,7 @@ jobs:
         id: build-rust
         run: |
           if [[ "${{matrix.rust_target}}" == "aarch64-unknown-linux-musl" ]]; then
-            cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot -- -C link-arg=-lgcc
+            cd crates/calendarbot && cargo rustc --release --target ${{ matrix.rust_target }} -- -C link-arg=-lgcc && cd ../..
           else
             cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
           fi
