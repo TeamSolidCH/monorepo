@@ -108,13 +108,11 @@ jobs:
           cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
           echo "path=./target/${{ matrix.rust_target }}/release/calendarbot" >> $GITHUB_OUTPUT
 
-      - name: Sed dockerfile
-        run: sed -i 's@<TARGETDIR>@${{ steps.build-rust.outputs.path }}@g' crates/calendarbot/Dockerfile
-
       - name: Build an push by digest
         id: build
         run:  docker buildx build
               --platform=${{ matrix.platform }}
+              --build-arg=TARGETPATH=${{ steps.build-rust.outputs.path }}
               --file=crates/calendarbot/Dockerfile
               --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
               --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
