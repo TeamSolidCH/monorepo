@@ -96,9 +96,6 @@ jobs:
         if: matrix.rust_target == 'aarch64-unknown-linux-musl'
         run: | 
           sudo apt-get install -y musl-dev llvm clang
-          export CC_aarch64_unknown_linux_musl=clang
-          export AR_aarch64_unknown_linux_musl=llvm-ar
-          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld"
 
       - name: Install musl tools
         run: sudo apt install -y musl-tools
@@ -106,7 +103,11 @@ jobs:
       - name: Build release artifact
         id: build-rust
         run: |
-          cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
+          if [[ "${{matrix.rust_target}}" == "aarch64-unknown-linux-musl" ]]; then
+            cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot -- -C link-arg=-lgcc
+          else
+            cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
+          fi
           echo "path=./target/${{ matrix.rust_target }}/release/calendarbot" >> $GITHUB_OUTPUT
 
       - name: Sed dockerfile
