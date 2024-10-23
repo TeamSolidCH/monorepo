@@ -95,7 +95,9 @@ jobs:
       - name: Install compiler tools (as we're cross-compiling)
         if: matrix.rust_target == 'aarch64-unknown-linux-musl'
         run: | 
-          sudo apt-get install -y musl-dev llvm clang
+          sudo apt-get install -y  gcc-aarch64-linux-gnu
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
+          export CC=aarch64-linux-gnu-gcc
 
       - name: Install musl tools
         run: sudo apt install -y musl-tools
@@ -103,11 +105,7 @@ jobs:
       - name: Build release artifact
         id: build-rust
         run: |
-          if [[ "${{matrix.rust_target}}" == "aarch64-unknown-linux-musl" ]]; then
-            cd crates/calendarbot && cargo rustc --release --target ${{ matrix.rust_target }} -- -C link-arg=-lgcc && cd ../..
-          else
-            cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
-          fi
+          cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
           echo "path=./target/${{ matrix.rust_target }}/release/calendarbot" >> $GITHUB_OUTPUT
 
       - name: Sed dockerfile
