@@ -2,22 +2,22 @@ name: 🚀 Publish calendarbot
 on:
   pull_request:
     paths:
-      - './crates/calendarbot/**'
-      - './Cargo.toml'
-      - './Cargo.lock'
-      - '.github/workflows/publish-calendarbot.yml'
-      - '.github/scripts/get-version.sh'
+      - "./crates/calendarbot/**"
+      - "./Cargo.toml"
+      - "./Cargo.lock"
+      - ".github/workflows/publish-calendarbot.yml"
+      - ".github/scripts/get-version.sh"
   push:
     tags:
       - calendarbot/v**
     branches:
-      - master
+      - main
     paths:
-      - './crates/calendarbot/**'
-      - './Cargo.toml'
-      - './Cargo.lock'
-      - '.github/workflows/publish-calendarbot.yml'
-      - '.github/scripts/get-version.sh'
+      - "./crates/calendarbot/**"
+      - "./Cargo.toml"
+      - "./Cargo.lock"
+      - ".github/workflows/publish-calendarbot.yml"
+      - ".github/scripts/get-version.sh"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -32,16 +32,14 @@ jobs:
   get-version:
     name: Get version
     runs-on: ubuntu-24.04
-    outputs: 
+    outputs:
       version: ${{ steps.version.outputs.VERSION }}
       tag_latest: ${{ steps.version.outputs.TAG_LATEST }}
     steps:
-      -
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - 
-        name: Get version
+      - name: Get version
         id: version
         env:
           PR_NUMBER: ${{ github.event.number }}
@@ -58,8 +56,7 @@ jobs:
             rust_target: aarch64-unknown-linux-musl
     runs-on: ubuntu-24.04
     steps:
-      -
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -67,13 +64,13 @@ jobs:
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-      
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -94,7 +91,7 @@ jobs:
 
       - name: Install compiler tools (as we're cross-compiling)
         if: matrix.rust_target == 'aarch64-unknown-linux-musl'
-        run: | 
+        run: |
           sudo apt-get install -y  gcc-aarch64-linux-gnu
           export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
           export CC=aarch64-linux-gnu-gcc
@@ -110,14 +107,14 @@ jobs:
 
       - name: Build an push by digest
         id: build
-        run:  docker buildx build
-              --platform=${{ matrix.platform }}
-              --build-arg=TARGETPATH=${{ steps.build-rust.outputs.path }}
-              --file=crates/calendarbot/Dockerfile
-              --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
-              --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
-              --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-              --metadata-file metadata.json .
+        run: docker buildx build
+          --platform=${{ matrix.platform }}
+          --build-arg=TARGETPATH=${{ steps.build-rust.outputs.path }}
+          --file=crates/calendarbot/Dockerfile
+          --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
+          --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
+          --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          --metadata-file metadata.json .
 
       - name: Export digest
         run: |
@@ -125,8 +122,8 @@ jobs:
           cat metadata.json
           cat metadata.json | jq -r '."containerimage.digest"'
           digest="$(cat metadata.json | jq -r '."containerimage.digest"')"
-          touch "/tmp/digests/${digest#sha256:}"          
-      
+          touch "/tmp/digests/${digest#sha256:}"
+
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
@@ -147,10 +144,10 @@ jobs:
           path: /tmp/digests
           pattern: digests-*
           merge-multiple: true
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -162,7 +159,7 @@ jobs:
         run: echo "tag_latest=$TAG_LATEST" >> $GITHUB_OUTPUT
         env:
           TAG_LATEST: ${{ needs.get-version.outputs.tag_latest }}
-      
+
       - name: Create manifest list and push
         if: steps.latest.outputs.tag_latest != 'true'
         working-directory: /tmp/digests
@@ -177,7 +174,6 @@ jobs:
           docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} -t ${{ env.REGISTRY_IMAGE }}:latest \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
-      
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }}
