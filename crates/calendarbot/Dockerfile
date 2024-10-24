@@ -1,9 +1,5 @@
-FROM debian:bookworm-slim
-RUN apt-get update -y && apt-get install -y --no-install-recommends libpq-dev=15.8-0+deb12u1 \
-	&& apt-get clean \
-	&& rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-ARG TARGETDIR
-COPY  ${TARGETDIR} /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/calendarbot"]
+FROM gcr.io/distroless/static:nonroot
+WORKDIR /
+ARG TARGETPATH=target/x86_64-unknown-linux-musl/release/calendarbot
+COPY --chown=nonroot:nonroot ${TARGETPATH} /calendarbot
+ENTRYPOINT [ "/calendarbot" ]

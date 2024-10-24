@@ -6,8 +6,8 @@ This is free software, and you are welcome to redistribute it
  */
 
 use anyhow::{Error, Result};
-use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool};
+use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::AsyncPgConnection;
 use poise::serenity_prelude as serenity;
 use std::env;
 use tokio::sync::mpsc::Sender;
@@ -18,13 +18,13 @@ pub struct Data {
     pub application_id: serenity::UserId,
     pub client_id: serenity::UserId,
     pub bot_start_time: std::time::Instant,
-    pub db: Pool<ConnectionManager<PgConnection>>,
+    pub db: Pool<AsyncPgConnection>,
     pub gcalendar_tx: Sender<CalendarCommands>,
 }
 
 impl Data {
     pub fn new(
-        db_connection: Pool<ConnectionManager<PgConnection>>,
+        db_connection: Pool<AsyncPgConnection>,
         gcalendar_tx: Sender<CalendarCommands>,
     ) -> Result<Data> {
         Ok(Self {

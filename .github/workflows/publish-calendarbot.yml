@@ -1,19 +1,23 @@
 name: 🚀 Publish calendarbot
 on:
   pull_request:
-    # paths: UNCOMMENT WHEN IT IS WORKING
-    #   - './crates/calendarbot'
-    #   - './Cargo.toml'
-    #   - './Cargo.lock'
+    paths:
+      - './crates/calendarbot/**'
+      - './Cargo.toml'
+      - './Cargo.lock'
+      - '.github/workflows/publish-calendarbot.yml'
+      - '.github/scripts/get-version.sh'
   push:
     tags:
       - calendarbot/v**
     branches:
       - master
     paths:
-      - './crates/calendarbot'
+      - './crates/calendarbot/**'
       - './Cargo.toml'
       - './Cargo.lock'
+      - '.github/workflows/publish-calendarbot.yml'
+      - '.github/scripts/get-version.sh'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -41,7 +45,6 @@ jobs:
         id: version
         env:
           PR_NUMBER: ${{ github.event.number }}
-          LAST_TAG: ${{ steps.previoustag.outputs.tag }}
         run: bash .github/scripts/get-version.sh
 
   build:
@@ -50,10 +53,10 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            rust_target: x86_64-unknown-linux-gnu
+            rust_target: x86_64-unknown-linux-musl
           - platform: linux/arm64
-            rust_target: aarch64-unknown-linux-gnu
-    runs-on: ubuntu-latest
+            rust_target: aarch64-unknown-linux-musl
+    runs-on: ubuntu-24.04
     steps:
       -
         uses: actions/checkout@v4
@@ -82,42 +85,46 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          targets: ${{ matrix.rust_target }}
 
       - name: Setup caching
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.rust_target }}
 
       - name: Install compiler tools (as we're cross-compiling)
-        if: matrix.rust_target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt install -y gcc-aarch64-linux-gnu
+        if: matrix.rust_target == 'aarch64-unknown-linux-musl'
+        run: | 
+          sudo apt-get install -y  gcc-aarch64-linux-gnu
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
+          export CC=aarch64-linux-gnu-gcc
+
+      - name: Install musl tools
+        run: sudo apt install -y musl-tools
 
       - name: Build release artifact
         id: build-rust
         run: |
-          if [[ "${{ matrix.rust_target }}" == "aarch64-unknown-linux-gnu" ]]; then 
-                rustup target add aarch64-unknown-linux-gnu
-                cargo build --release --target aarch64-unknown-linux-gnu 
-                echo "path=./target/aarch64-unknown-linux-gnu/release/calendarbot" >> $GITHUB_OUTPUT 
-            else
-              cargo build --release
-              echo "path=./target/release/calendarbot" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Build and push by digest
+          cargo build --release --target ${{ matrix.rust_target }} --bin calendarbot
+          echo "path=./target/${{ matrix.rust_target }}/release/calendarbot" >> $GITHUB_OUTPUT
+
+      - name: Build an push by digest
         id: build
-        uses: docker/build-push-action@v6
-        with:
-          platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: TARGETDIR=${{ steps.build-rust.outputs.path }}
-          file: crates/calendarbot/Dockerfile
-          cache-from: type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
-          cache-to: type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }},mode=max
-          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-      
+        run:  docker buildx build
+              --platform=${{ matrix.platform }}
+              --build-arg=TARGETPATH=${{ steps.build-rust.outputs.path }}
+              --file=crates/calendarbot/Dockerfile
+              --cache-from=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
+              --cache-to=type=gha,scope=${{ env.REGISTRY_IMAGE }}-${{ github.ref_name }}-${{ matrix.platform }}
+              --output=type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+              --metadata-file metadata.json .
+
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
+          cat metadata.json
+          cat metadata.json | jq -r '."containerimage.digest"'
+          digest="$(cat metadata.json | jq -r '."containerimage.digest"')"
           touch "/tmp/digests/${digest#sha256:}"          
       
       - name: Upload digest
@@ -160,17 +167,14 @@ jobs:
         if: steps.latest.outputs.tag_latest != 'true'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \ 
-            -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
+          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Create manifest list and push (latest)
         if: steps.latest.outputs.tag_latest == 'true'
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")'  <<< "$DOCKER_METADATA_OUTPUT_JSON") \ 
-            -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} \
-            -t ${{ env.REGISTRY_IMAGE }}:latest \
+          docker buildx imagetools create -t ${{ env.REGISTRY_IMAGE }}:${{ needs.get-version.outputs.version }} -t ${{ env.REGISTRY_IMAGE }}:latest \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       
