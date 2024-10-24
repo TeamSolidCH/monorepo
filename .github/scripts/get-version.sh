@@ -8,7 +8,7 @@ if [[ "$GITHUB_EVENT_NAME" == "$push_string" ]]; then
 		VERSION=$(echo $tag_name | rev | cut -d'/' -f1 | rev)
 		echo "Got version: $VERSION"
 		tag_latest="true"
-		if [[ $VERSION =~ "-"]]; then
+		if [[ $VERSION =~ "-" ]]; then
 		    echo "Tag is a pre-release"
 			tag_latest="false"
         fi
