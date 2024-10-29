@@ -146,17 +146,20 @@ pub async fn delete(
 
     let res = guilds_calendars::guilds_calendars
         .filter(guilds_calendars::channelid.eq(channel.id.get().to_string()))
-        .select((guilds_calendars::channelid, guilds_calendars::messageid))
-        .first::<(String, Option<String>)>(&mut db)
+        .select((guilds_calendars::calendar_id, guilds_calendars::messageid))
+        .first::<(i32, Option<String>)>(&mut db)
         .await;
 
     if res.is_err() {
         let _ = ctx.reply("This channel doesn't have a calendar").await?;
         return Ok(());
     }
+    let res = res.unwrap();
+
+    let calendar_id = res.0;
 
     // Deleting the calendar message
-    if let Some(message_id) = res.unwrap().1 {
+    if let Some(message_id) = res.1 {
         let message_id = serenity::MessageId::new(message_id.parse::<u64>().unwrap());
 
         let res = channel.delete_messages(&ctx.http(), vec![message_id]).await;
@@ -178,6 +181,26 @@ pub async fn delete(
         let _ = ctx.reply("Unable to delete calendar").await?;
         error!("Unable to delete calendar: {:?}", del);
         return Ok(());
+    }
+
+    // Remove the calendar from the database if it's not used anymore
+    // (no other guild or channel is using it)
+    let res = guilds_calendars::guilds_calendars
+        .filter(guilds_calendars::calendar_id.eq(calendar_id.clone()))
+        .select(guilds_calendars::calendar_id)
+        .first::<i32>(&mut db)
+        .await;
+
+    if res.is_err() {
+        // The calendar is not used anymore
+        // Remove it from the database
+        let del = diesel::delete(calendars::calendars.filter(calendars::id.eq(calendar_id)))
+            .execute(&mut db)
+            .await;
+        if del.is_err() {
+            error!("Failed to delete calendar from Calendar table: {:?}", del);
+            ctx.reply("Unable to delete calendar").await?;
+        }
     }
 
     ctx.send(
