@@ -2,9 +2,9 @@ name: 🚀 Publish calendarbot
 on:
   pull_request:
     paths:
-      - "./crates/calendarbot/**"
-      - "./Cargo.toml"
-      - "./Cargo.lock"
+      - "crates/calendarbot/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/publish-calendarbot.yml"
       - ".github/scripts/get-version.sh"
   push:
@@ -13,9 +13,9 @@ on:
     branches:
       - main
     paths:
-      - "./crates/calendarbot/**"
-      - "./Cargo.toml"
-      - "./Cargo.lock"
+      - "crates/calendarbot/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/publish-calendarbot.yml"
       - ".github/scripts/get-version.sh"
 

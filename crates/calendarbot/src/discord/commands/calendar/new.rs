@@ -4,6 +4,7 @@ Calendarbot  Copyright (C) 2023 Zbinden Yohan
 This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
+
 use crate::events::CalendarCommands;
 use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds::dsl as guilds;
@@ -12,7 +13,7 @@ use crate::ApplicationContext;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use poise::serenity_prelude::{self as serenity};
+use poise::serenity_prelude as serenity;
 use tokio::sync::oneshot;
 
 #[poise::command(slash_command, guild_only, category = "Google calendar")]
