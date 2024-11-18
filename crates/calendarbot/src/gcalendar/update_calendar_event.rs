@@ -46,8 +46,8 @@ impl GCalendar {
             .expect("Unable to get calendars");
 
         for calendar in db_calendars {
-            trace!("Updating calendar: {}", calendar.googleid);
-            let cal_id = calendar.googleid.clone();
+            trace!("Updating calendar: {}", calendar.googleId);
+            let cal_id = calendar.googleId.clone();
             let sender = self.calendar_update_tx.clone();
             let events = self
                 .hub
@@ -87,7 +87,7 @@ impl GCalendar {
 
             let forced_update = guild_calendars
                 .iter()
-                .any(|guild_calendar| guild_calendar.forceupdate);
+                .any(|guild_calendar| guild_calendar.forceUpdate);
 
             if do_match && !forced_update {
                 debug!("No new events");
@@ -98,7 +98,7 @@ impl GCalendar {
             if forced_update {
                 guild_calendars = guild_calendars
                     .into_iter()
-                    .filter(|guild_calendar| guild_calendar.forceupdate)
+                    .filter(|guild_calendar| guild_calendar.forceUpdate)
                     .collect::<Vec<GuildCalendar>>();
             }
 
@@ -111,12 +111,12 @@ impl GCalendar {
             let mut discord_channel_and_message_ids = Vec::new();
 
             for guild_calendar in guild_calendars {
-                let channel_id = guild_calendar.channelid.parse::<u64>();
+                let channel_id = guild_calendar.channelId.parse::<u64>();
                 if let Err(e) = channel_id {
                     error!("Unable to parse channel id: {:?}", e);
                     continue;
                 }
-                let msg_id = if let Some(val) = guild_calendar.messageid {
+                let msg_id = if let Some(val) = guild_calendar.messageId {
                     match val.parse::<u64>() {
                         Err(e) => {
                             warn!("Unable to parse message id: {:?}", e);
@@ -143,7 +143,7 @@ impl GCalendar {
             // If was forced update change to false in db
             if forced_update {
                 let res = diesel::update(GuildCalendar::belonging_to(&calendar))
-                    .set(guilds_calendars::forceupdate.eq(false))
+                    .set(guilds_calendars::forceUpdate.eq(false))
                     .execute(db)
                     .await;
 

@@ -4,10 +4,7 @@ diesel::table! {
     calendars (id) {
         id -> Int4,
         #[max_length = 90]
-        googleid -> Varchar,
-        #[max_length = 30]
-        timezone -> Varchar,
-        pollinterval -> Int4,
+        googleId -> Varchar,
     }
 }
 
@@ -15,19 +12,25 @@ diesel::table! {
     guilds (id) {
         id -> Int4,
         #[max_length = 64]
-        discordid -> Varchar,
+        discordId -> Varchar,
     }
 }
 
 diesel::table! {
-    guilds_calendars (guild_id, calendar_id, channelid) {
+    guilds_calendars (guild_id, calendar_id, channelId) {
         guild_id -> Int4,
         calendar_id -> Int4,
         #[max_length = 64]
-        channelid -> Varchar,
+        channelId -> Varchar,
         #[max_length = 64]
-        messageid -> Nullable<Varchar>,
-        forceupdate -> Bool,
+        messageId -> Nullable<Varchar>,
+        forceUpdate -> Bool,
+        #[max_length = 30]
+        timezone -> Varchar,
+        pollInterval -> Int4,
+        nbDisplayedDays -> Int4,
+        skipWeekend -> Bool,
+        skipEmptyDays -> Bool,
     }
 }
 

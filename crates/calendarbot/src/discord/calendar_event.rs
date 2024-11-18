@@ -109,7 +109,7 @@ impl Discord {
                             // We need to update the message_id in the database
                             if Some(msg_id.get()) != message_id {
                                 let db_cal_id = calendars::calendars
-                                    .filter(calendars::googleid.eq(event.calendar_id.clone()))
+                                    .filter(calendars::googleId.eq(event.calendar_id.clone()))
                                     .select(calendars::id)
                                     .first::<i32>(&mut db)
                                     .await
@@ -117,11 +117,11 @@ impl Discord {
 
                                 diesel::update(guilds_calendars::guilds_calendars)
                                     .filter(
-                                        guilds_calendars::channelid
+                                        guilds_calendars::channelId
                                             .eq(channel_id.to_string())
                                             .and(guilds_calendars::calendar_id.eq(db_cal_id)),
                                     )
-                                    .set(guilds_calendars::messageid.eq(msg_id.get().to_string()))
+                                    .set(guilds_calendars::messageId.eq(msg_id.get().to_string()))
                                     .execute(&mut db)
                                     .await
                                     .expect("Unable to update message id in database");
