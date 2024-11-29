@@ -5,7 +5,7 @@ This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
 use google_calendar3::{
@@ -52,28 +52,68 @@ pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 pub const EMBED_COLOR: (u8, u8, u8) = (0xb7, 0x47, 0x00);
 
+#[derive(Debug, Copy, Clone)]
 pub enum CalendarEventSource {
     GoogleCalendar,
 }
 
+#[derive(Clone, Debug)]
 pub struct CalendarEvent {
     pub id: String,
     pub summary: String,
     pub description: String,
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
+    pub start: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
     pub event_source: CalendarEventSource,
 }
 
-impl From<Event> for CalendarEvent {
-    fn from(value: Event) -> Self {
-        Self {
-            id: value.id.unwrap(),
-            summary: value.summary.unwrap_or_default(),
-            description: value.description.unwrap_or_default(),
-            start: value.start.as_ref().unwrap().date_time.unwrap(),
-            end: value.end.as_ref().unwrap().date_time.unwrap(),
-            event_source: CalendarEventSource::GoogleCalendar,
-        }
+impl PartialEq for CalendarEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.summary == other.summary
+            && self.description == other.description
+            && self.start == other.start
+            && self.end == other.end
     }
+}
+
+impl Eq for CalendarEvent {}
+
+impl TryFrom<Event> for CalendarEvent {
+    fn try_from(value: Event) -> Result<Self, Self::Error> {
+        let id = match value.id {
+            Some(id) => id,
+            None => return Err(anyhow!("Event id is missing")),
+        };
+
+        let summary = value.summary.unwrap_or_default();
+        let description = value.description.unwrap_or_default();
+
+        let start = match value.start {
+            Some(start) => match start.date_time {
+                Some(date_time) => Some(date_time),
+                None => None,
+            },
+            None => None,
+        };
+
+        let end = match value.end {
+            Some(end) => match end.date_time {
+                Some(date_time) => Some(date_time),
+                None => None,
+            },
+            None => None,
+        };
+
+        Ok(Self {
+            id,
+            summary,
+            description,
+            start,
+            end,
+            event_source: CalendarEventSource::GoogleCalendar,
+        })
+    }
+
+    type Error = anyhow::Error;
 }

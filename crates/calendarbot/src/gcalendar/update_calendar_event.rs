@@ -5,14 +5,16 @@ This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
 
+use crate::types::CalendarEvent;
 use crate::GCalendar;
+use anyhow::Error;
 
 use crate::events::UpdateCalendarEvent;
 use crate::models::{Calendar, GuildCalendar};
 use crate::schema::guilds_calendars;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use google_calendar3::{api::Event, chrono};
+use google_calendar3::chrono;
 use log::{debug, error, trace, warn};
 use std::time::Duration;
 
@@ -60,13 +62,22 @@ impl GCalendar {
                 .expect("Unable to get events")
                 .1;
 
-            let new_events = events.items.clone().unwrap_or_default();
+            let new_events: Vec<CalendarEvent> = events
+                .items
+                .unwrap_or_default()
+                .into_iter()
+                .map(|event| {
+                    CalendarEvent::try_from(event)
+                        .or_else(|e| Err(Error::msg(e)))
+                        .expect("Unable to convert event")
+                })
+                .collect();
 
             let cached_events = self.events_cache.entry(cal_id.clone()).or_default();
             let matching = cached_events
                 .iter()
                 .zip(new_events.iter())
-                .filter(|&(a, b)| GCalendar::compare_event(a, b))
+                .filter(|&(a, b)| a == b)
                 .count();
 
             let do_match = matching == new_events.len() && matching == cached_events.len();
@@ -152,16 +163,5 @@ impl GCalendar {
                 }
             }
         }
-    }
-
-    pub fn compare_event(a: &Event, b: &Event) -> bool {
-        a.id == b.id
-            && a.summary == b.summary
-            && a.description == b.description
-            && a.location == b.location
-            && a.start.as_ref().unwrap().date_time.as_ref().unwrap()
-                == b.start.as_ref().unwrap().date_time.as_ref().unwrap()
-            && a.end.as_ref().unwrap().date_time.as_ref().unwrap()
-                == b.end.as_ref().unwrap().date_time.as_ref().unwrap()
     }
 }

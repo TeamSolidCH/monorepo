@@ -10,18 +10,18 @@ pub mod worker_thread;
 
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
-use google_calendar3::api::Event;
 use google_calendar3::hyper::client::HttpConnector;
 use google_calendar3::{hyper, hyper_rustls, oauth2, CalendarHub, Result};
 use std::collections::BTreeMap;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::events::{CalendarCommands, UpdateCalendarEvent};
+use crate::types::CalendarEvent;
 
 pub struct GCalendar {
     pub hub: CalendarHub<hyper_rustls::HttpsConnector<HttpConnector>>,
     pub db: Pool<AsyncPgConnection>,
-    events_cache: BTreeMap<String, Vec<Event>>,
+    events_cache: BTreeMap<String, Vec<CalendarEvent>>,
     calendar_update_tx: Sender<UpdateCalendarEvent>,
 }
 

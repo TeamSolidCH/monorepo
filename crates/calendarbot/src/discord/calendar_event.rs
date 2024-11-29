@@ -10,12 +10,12 @@ use crate::UpdateCalendarEvent;
 
 use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
+use crate::types::CalendarEvent;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
-use google_calendar3::api::Event;
 use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
 use log::{debug, error, warn};
 use poise::serenity_prelude as serenity;
@@ -133,8 +133,8 @@ impl Discord {
         });
     }
 
-    fn event_to_embed(events: Vec<Event>) -> Result<serenity::CreateEmbed> {
-        let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<Event>> = BTreeMap::new();
+    fn event_to_embed(events: Vec<CalendarEvent>) -> Result<serenity::CreateEmbed> {
+        let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<CalendarEvent>> = BTreeMap::new();
         let mut fields: Vec<(String, String, bool)> = vec![];
 
         for ele in events {
@@ -151,22 +151,11 @@ impl Discord {
                 continue;
             }
 
-            let start_date = start_date.unwrap().date_time;
-            let end_date = end_date.unwrap().date_time;
-
-            if let (None, None) = (start_date, end_date) {
-                warn!(
-                    "Event start datetime or event end datetime is None {:?}",
-                    ele.clone()
-                );
-                continue;
-            }
+            let start_date = start_date.unwrap();
+            let end_date = end_date.unwrap();
 
             sorted
-                .entry((
-                    start_date.unwrap().date_naive(),
-                    end_date.unwrap().date_naive(),
-                ))
+                .entry((start_date.date_naive(), end_date.date_naive()))
                 .or_default()
                 .push(ele);
         }
@@ -188,9 +177,6 @@ impl Discord {
                     "```{} - {} | {}```\n",
                     event
                         .start
-                        .clone()
-                        .unwrap()
-                        .date_time
                         .unwrap_or_else(|| start_date
                             .clone()
                             .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
@@ -198,15 +184,12 @@ impl Discord {
                         .format("%H:%M"),
                     event
                         .end
-                        .clone()
-                        .unwrap()
-                        .date_time
                         .unwrap_or_else(|| end_date
                             .clone()
                             .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
                             .and_utc())
                         .format("%H:%M"),
-                    event.summary.clone().unwrap()
+                    event.summary.clone()
                 ));
             }
             let mut format = String::from("**%A** - %e %B");
