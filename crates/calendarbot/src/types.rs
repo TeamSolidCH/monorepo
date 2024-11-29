@@ -90,18 +90,12 @@ impl TryFrom<Event> for CalendarEvent {
         let description = value.description.unwrap_or_default();
 
         let start = match value.start {
-            Some(start) => match start.date_time {
-                Some(date_time) => Some(date_time),
-                None => None,
-            },
+            Some(start) => start.date_time,
             None => None,
         };
 
         let end = match value.end {
-            Some(end) => match end.date_time {
-                Some(date_time) => Some(date_time),
-                None => None,
-            },
+            Some(end) => end.date_time,
             None => None,
         };
 

@@ -68,7 +68,7 @@ impl GCalendar {
                 .into_iter()
                 .map(|event| {
                     CalendarEvent::try_from(event)
-                        .or_else(|e| Err(Error::msg(e)))
+                        .map_err(Error::msg)
                         .expect("Unable to convert event")
                 })
                 .collect();
