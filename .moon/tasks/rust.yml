@@ -1,58 +1,56 @@
-$schema: 'https://moonrepo.dev/schemas/tasks.json'
+$schema: "https://moonrepo.dev/schemas/tasks.json"
 
 tasks:
   build:
-    command: 'cargo build'
+    command: "cargo build"
     options:
       runInCI: false
     inputs:
-      - '@globs(sources)'
+      - "@globs(sources)"
   dev:
-    command: 'cargo run'
+    command: "cargo run"
     options:
       runInCI: false
     inputs:
-      - '@globs(sources)'
+      - "@globs(sources)"
   check:
-    command: 'cargo check --workspace'
-    options: 
+    command: "cargo check --workspace"
+    options:
       runInCI: true
     inputs:
-      - '@globs(sources)'
+      - "@globs(sources)"
   format:
-    command: 'cargo fmt --all --check'
+    command: "cargo fmt --all --check"
     options:
       runInCI: true
     inputs:
-      - '@globs(sources)'
-      - '@globs(tests)'
+      - "@globs(sources)"
+      - "@globs(tests)"
   lint:
-    command: 'cargo clippy --workspace'
+    command: "cargo clippy --workspace"
     options:
       runInCI: true
     inputs:
-      - '@globs(sources)'
-      - '@globs(tests)'
+      - "@globs(sources)"
+      - "@globs(tests)"
   test:
-    command: 'cargo test --workspace'
+    command: "cargo test --workspace"
     options:
       runInCI: true
     inputs:
-      - '@globs(sources)'
-      - '@globs(tests)'
+      - "@globs(sources)"
+      - "@globs(tests)"
   buildRelease:
-    command: 'cargo build --release'
+    command: "cargo build --release"
     options:
       runInCI: false
     inputs:
-      - '@globs(sources)'
-      
+      - "@globs(sources)"
 
 fileGroups:
   sources:
-    - 'crates/*/src/**/*'
-    - 'crates/*/Cargo.toml'
-    - 'Cargo.toml'
+    - "src/**/*"
+    - "Cargo.toml"
   tests:
-    - 'crates/*/benches/**/*'
-    - 'crates/*/tests/**/*'
+    - "benches/**/*"
+    - "tests/**/*"
