@@ -10,10 +10,11 @@ use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
 use google_calendar3::{
     api::Event,
-    chrono::{DateTime, Utc},
+    chrono::{DateTime, Datelike, NaiveDate, NaiveTime, Utc},
 };
+use log::warn;
 use poise::serenity_prelude as serenity;
-use std::env;
+use std::{collections::BTreeMap, env};
 use tokio::sync::mpsc::Sender;
 
 use crate::events::CalendarCommands;
@@ -65,6 +66,88 @@ pub struct CalendarEvent {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
     pub event_source: CalendarEventSource,
+}
+
+impl CalendarEvent {
+    pub fn to_embed(events: Vec<Self>) -> serenity::CreateEmbed {
+        let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<CalendarEvent>> = BTreeMap::new();
+        let mut fields: Vec<(String, String, bool)> = vec![];
+
+        for ele in events {
+            let ele_clone = ele.clone();
+
+            let start_date = ele_clone.start;
+            let end_date = ele_clone.end;
+
+            if let (None, None) = (start_date.as_ref(), end_date.as_ref()) {
+                warn!(
+                    "Event start date or event end date is None {:?}",
+                    ele.clone()
+                );
+                continue;
+            }
+
+            let start_date = start_date.unwrap();
+            let end_date = end_date.unwrap();
+
+            sorted
+                .entry((start_date.date_naive(), end_date.date_naive()))
+                .or_default()
+                .push(ele);
+        }
+
+        for ((start_date, end_date), events) in sorted.iter() {
+            let mut field = String::new();
+            for event in events {
+                if event.start.is_none() {
+                    warn!("Event start is None");
+                    continue;
+                };
+
+                if event.end.is_none() {
+                    warn!("Event end is None");
+                    continue;
+                };
+
+                field.push_str(&format!(
+                    "```{} - {} | {}```\n",
+                    event
+                        .start
+                        .unwrap_or_else(|| start_date
+                            .clone()
+                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                            .and_utc())
+                        .format("%H:%M"),
+                    event
+                        .end
+                        .unwrap_or_else(|| end_date
+                            .clone()
+                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                            .and_utc())
+                        .format("%H:%M"),
+                    event.summary.clone()
+                ));
+            }
+            let mut format = String::from("**%A** - %e %B");
+            if start_date.year() != end_date.year() || start_date.year() != Utc::now().year() {
+                format = String::from("%F");
+            }
+
+            let mut key = start_date.format(&format.clone()).to_string();
+
+            if start_date.format("%F").to_string() != end_date.format("%F").to_string() {
+                key.push_str(
+                    &end_date
+                        .format(format!(" // {}", format.clone()).as_str())
+                        .to_string(),
+                );
+            }
+
+            fields.push((key, field, false));
+        }
+
+        serenity::CreateEmbed::new().title("Events").fields(fields)
+    }
 }
 
 impl PartialEq for CalendarEvent {

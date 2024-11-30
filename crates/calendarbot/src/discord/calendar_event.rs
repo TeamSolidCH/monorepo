@@ -16,10 +16,8 @@ use diesel::prelude::*;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
-use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
-use log::{debug, error, warn};
+use log::{debug, error};
 use poise::serenity_prelude as serenity;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 
@@ -82,14 +80,7 @@ impl Discord {
 
                 let cache = cache.as_ref().lock().await.clone().unwrap();
 
-                let embed = match Discord::event_to_embed(event.new_events.clone()) {
-                    Ok(v) => v,
-                    Err(_) => serenity::CreateEmbed::new().title("Events").field(
-                        "Error",
-                        "Error getting events",
-                        true,
-                    ),
-                };
+                let embed = CalendarEvent::to_embed(event.new_events.clone());
 
                 for (channel_id, message_id) in event.discord_channel_and_message_ids {
                     debug!(target: &channel_id.to_string(), "Handling new_events with message_id: {:?}", message_id);
@@ -131,85 +122,5 @@ impl Discord {
                 }
             }
         });
-    }
-
-    fn event_to_embed(events: Vec<CalendarEvent>) -> Result<serenity::CreateEmbed> {
-        let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<CalendarEvent>> = BTreeMap::new();
-        let mut fields: Vec<(String, String, bool)> = vec![];
-
-        for ele in events {
-            let ele_clone = ele.clone();
-
-            let start_date = ele_clone.start;
-            let end_date = ele_clone.end;
-
-            if let (None, None) = (start_date.as_ref(), end_date.as_ref()) {
-                warn!(
-                    "Event start date or event end date is None {:?}",
-                    ele.clone()
-                );
-                continue;
-            }
-
-            let start_date = start_date.unwrap();
-            let end_date = end_date.unwrap();
-
-            sorted
-                .entry((start_date.date_naive(), end_date.date_naive()))
-                .or_default()
-                .push(ele);
-        }
-
-        for ((start_date, end_date), events) in sorted.iter() {
-            let mut field = String::new();
-            for event in events {
-                if event.start.is_none() {
-                    warn!("Event start is None");
-                    continue;
-                };
-
-                if event.end.is_none() {
-                    warn!("Event end is None");
-                    continue;
-                };
-
-                field.push_str(&format!(
-                    "```{} - {} | {}```\n",
-                    event
-                        .start
-                        .unwrap_or_else(|| start_date
-                            .clone()
-                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                            .and_utc())
-                        .format("%H:%M"),
-                    event
-                        .end
-                        .unwrap_or_else(|| end_date
-                            .clone()
-                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                            .and_utc())
-                        .format("%H:%M"),
-                    event.summary.clone()
-                ));
-            }
-            let mut format = String::from("**%A** - %e %B");
-            if start_date.year() != end_date.year() || start_date.year() != Utc::now().year() {
-                format = String::from("%F");
-            }
-
-            let mut key = start_date.format(&format.clone()).to_string();
-
-            if start_date.format("%F").to_string() != end_date.format("%F").to_string() {
-                key.push_str(
-                    &end_date
-                        .format(format!(" // {}", format.clone()).as_str())
-                        .to_string(),
-                );
-            }
-
-            fields.push((key, field, false));
-        }
-
-        Ok(serenity::CreateEmbed::new().title("Events").fields(fields))
     }
 }
