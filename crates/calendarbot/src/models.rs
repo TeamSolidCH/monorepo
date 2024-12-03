@@ -8,7 +8,7 @@ This is free software, and you are welcome to redistribute it
 
 use diesel::prelude::*;
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Debug)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Debug, Clone)]
 #[diesel(table_name = crate::schema::calendars)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Calendar {
@@ -17,7 +17,7 @@ pub struct Calendar {
     pub googleId: String,
 }
 
-#[derive(Identifiable, Queryable, Selectable, Associations, Debug)]
+#[derive(Identifiable, Queryable, Selectable, Associations, Debug, Clone)]
 #[diesel(belongs_to(Calendar))]
 #[diesel(belongs_to(Guild))]
 #[diesel(table_name = crate::schema::guilds_calendars)]
@@ -36,7 +36,7 @@ pub struct GuildCalendar {
     pub skipEmptyDays: bool,
 }
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Debug)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Debug, Clone)]
 #[diesel(table_name = crate::schema::guilds)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Guild {

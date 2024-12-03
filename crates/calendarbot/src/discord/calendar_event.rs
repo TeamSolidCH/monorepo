@@ -80,7 +80,10 @@ impl Discord {
 
                 let cache = cache.as_ref().lock().await.clone().unwrap();
 
-                let embed = CalendarEvent::to_embed(event.new_events.clone());
+                let embed = CalendarEvent::to_embed(
+                    event.new_events.clone(),
+                    event.calendar_options.clone(),
+                );
 
                 for (channel_id, message_id) in event.discord_channel_and_message_ids {
                     debug!(target: &channel_id.to_string(), "Handling new_events with message_id: {:?}", message_id);

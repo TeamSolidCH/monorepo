@@ -5,7 +5,7 @@ This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
 
-use crate::types::CalendarEvent;
+use crate::types::{CalendarEvent, CalendarOptions};
 use crate::GCalendar;
 use anyhow::Error;
 
@@ -16,6 +16,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use google_calendar3::chrono;
 use log::{debug, error, trace, warn};
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 impl GCalendar {
@@ -119,7 +120,7 @@ impl GCalendar {
             }
             cached_events.extend(new_events.clone());
 
-            let mut discord_channel_and_message_ids = Vec::new();
+            let mut discord_channel_and_message_ids = BTreeMap::new();
 
             for guild_calendar in guild_calendars {
                 let channel_id = guild_calendar.channelId.parse::<u64>();
@@ -127,7 +128,7 @@ impl GCalendar {
                     error!("Unable to parse channel id: {:?}", e);
                     continue;
                 }
-                let msg_id = if let Some(val) = guild_calendar.messageId {
+                let msg_id = if let Some(ref val) = guild_calendar.messageId {
                     match val.parse::<u64>() {
                         Err(e) => {
                             warn!("Unable to parse message id: {:?}", e);
@@ -139,17 +140,31 @@ impl GCalendar {
                     None
                 };
 
-                discord_channel_and_message_ids.push((channel_id.unwrap(), msg_id))
+                let options = CalendarOptions::try_from(guild_calendar.clone());
+                if options.is_err() {
+                    error!("Unable to convert CalendarOptions: {:?}", options.err());
+                    continue;
+                }
+
+                discord_channel_and_message_ids
+                    .entry(options.unwrap())
+                    .and_modify(|e: &mut Vec<(u64, Option<u64>)>| {
+                        e.push((channel_id.clone().unwrap(), msg_id))
+                    })
+                    .or_insert_with(|| vec![(channel_id.clone().unwrap(), msg_id)]);
             }
 
-            sender
-                .send(UpdateCalendarEvent {
-                    discord_channel_and_message_ids,
-                    calendar_id: cal_id,
-                    new_events,
-                })
-                .await
-                .expect("Unable to send events");
+            for (options, discord_channel_and_message_ids) in discord_channel_and_message_ids {
+                sender
+                    .send(UpdateCalendarEvent {
+                        discord_channel_and_message_ids,
+                        calendar_id: cal_id.clone(),
+                        calendar_options: options,
+                        new_events: new_events.clone(),
+                    })
+                    .await
+                    .expect("Unable to send events");
+            }
 
             // If was forced update change to false in db
             if forced_update {

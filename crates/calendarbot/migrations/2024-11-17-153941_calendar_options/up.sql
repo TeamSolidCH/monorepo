@@ -2,7 +2,7 @@ ALTER TABLE calendars DROP COLUMN "pollInterval";
 ALTER TABLE calendars DROP COLUMN "timezone";
 
 ALTER TABLE guilds_calendars
-ADD COLUMN "timezone" varchar(30) DEFAULT 'Utc' NOT NULL;
+ADD COLUMN "timezone" varchar(30) DEFAULT 'Etc/UTC' NOT NULL;
 
 ALTER TABLE guilds_calendars
 ADD COLUMN "pollInterval" int DEFAULT 5 NOT NULL;

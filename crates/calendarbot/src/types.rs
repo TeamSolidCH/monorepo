@@ -5,15 +5,18 @@ This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
 
+use crate::models::GuildCalendar;
 use anyhow::{anyhow, Error, Result};
+use chrono_tz::Tz;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
 use google_calendar3::{
     api::Event,
-    chrono::{DateTime, Datelike, NaiveDate, NaiveTime, Utc},
+    chrono::{DateTime, Datelike, NaiveDate, Utc},
 };
 use log::warn;
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity};
+use std::cmp::{Ord, PartialOrd};
 use std::{collections::BTreeMap, env};
 use tokio::sync::mpsc::Sender;
 
@@ -58,6 +61,68 @@ pub enum CalendarEventSource {
     GoogleCalendar,
 }
 
+#[derive(Clone, Debug, Eq)]
+pub struct CalendarOptions {
+    pub timezone: Tz,
+    pub num_of_days: i32,
+    pub skip_weekend: bool,
+    pub show_if_no_events: bool,
+}
+
+impl PartialEq for CalendarOptions {
+    fn eq(&self, other: &Self) -> bool {
+        self.timezone == other.timezone
+            && self.num_of_days == other.num_of_days
+            && self.skip_weekend == other.skip_weekend
+            && self.show_if_no_events == other.show_if_no_events
+    }
+}
+
+impl PartialOrd for CalendarOptions {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CalendarOptions {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.num_of_days
+            .cmp(&other.num_of_days)
+            .then_with(|| self.skip_weekend.cmp(&other.skip_weekend))
+            .then_with(|| self.show_if_no_events.cmp(&other.show_if_no_events))
+    }
+}
+
+impl CalendarOptions {
+    fn to_guild_calendar(&self, base_calendar: GuildCalendar) -> GuildCalendar {
+        let mut new_calendar = base_calendar;
+        new_calendar.timezone = self.timezone.to_string();
+        new_calendar.skipWeekend = self.skip_weekend;
+        new_calendar.skipEmptyDays = !self.show_if_no_events;
+        new_calendar.nbDisplayedDays = self.num_of_days;
+
+        new_calendar
+    }
+}
+
+impl TryFrom<GuildCalendar> for CalendarOptions {
+    type Error = anyhow::Error;
+
+    fn try_from(guild_calendar: GuildCalendar) -> std::result::Result<Self, Self::Error> {
+        let timezone: Tz = match guild_calendar.timezone.parse() {
+            Ok(tz) => tz,
+            Err(e) => return Err(anyhow!("Failed to parse timezone: {}", e)),
+        };
+
+        Ok(Self {
+            timezone,
+            num_of_days: guild_calendar.nbDisplayedDays,
+            show_if_no_events: !guild_calendar.skipEmptyDays,
+            skip_weekend: guild_calendar.skipWeekend,
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct CalendarEvent {
     pub id: String,
@@ -69,7 +134,7 @@ pub struct CalendarEvent {
 }
 
 impl CalendarEvent {
-    pub fn to_embed(events: Vec<Self>) -> serenity::CreateEmbed {
+    pub fn to_embed(events: Vec<Self>, options: CalendarOptions) -> serenity::CreateEmbed {
         let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<CalendarEvent>> = BTreeMap::new();
         let mut fields: Vec<(String, String, bool)> = vec![];
 
@@ -87,8 +152,8 @@ impl CalendarEvent {
                 continue;
             }
 
-            let start_date = start_date.unwrap();
-            let end_date = end_date.unwrap();
+            let start_date = start_date.unwrap().with_timezone(&options.timezone);
+            let end_date = end_date.unwrap().with_timezone(&options.timezone);
 
             sorted
                 .entry((start_date.date_naive(), end_date.date_naive()))
@@ -109,22 +174,13 @@ impl CalendarEvent {
                     continue;
                 };
 
+                let start = event.start.unwrap().with_timezone(&options.timezone);
+                let end = event.end.unwrap().with_timezone(&options.timezone);
+
                 field.push_str(&format!(
                     "```{} - {} | {}```\n",
-                    event
-                        .start
-                        .unwrap_or_else(|| start_date
-                            .clone()
-                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                            .and_utc())
-                        .format("%H:%M"),
-                    event
-                        .end
-                        .unwrap_or_else(|| end_date
-                            .clone()
-                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                            .and_utc())
-                        .format("%H:%M"),
+                    start.format("%H:%M"),
+                    end.format("%H:%M"),
                     event.summary.clone()
                 ));
             }
