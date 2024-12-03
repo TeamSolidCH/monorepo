@@ -27,7 +27,7 @@ tasks:
       - "@globs(sources)"
       - "@globs(tests)"
   lint:
-    command: "cargo clippy --workspace"
+    command: "cargo clippy --workspace -- -D warnings"
     options:
       runInCI: true
     inputs:
