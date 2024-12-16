@@ -9,6 +9,7 @@ use crate::events::CalendarCommands;
 use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds::dsl as guilds;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
+use crate::types::TimezoneChoices;
 use crate::ApplicationContext;
 use anyhow::Result;
 use diesel::prelude::*;
@@ -23,6 +24,7 @@ pub async fn new(
     #[channel_types("Text")]
     #[description = "Channel (defaults to the current channel)"]
     channel: Option<serenity::GuildChannel>,
+    #[description = "Timezone (defaults to UTC)"] timezone: TimezoneChoices,
 ) -> Result<()> {
     let channel = match channel {
         Some(c) => c,
@@ -33,8 +35,8 @@ pub async fn new(
 
     // Checking if the channel as calendar
     let res = guilds_calendars::guilds_calendars
-        .filter(guilds_calendars::channelid.eq(channel.id.get().to_string()))
-        .select(guilds_calendars::channelid)
+        .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
+        .select(guilds_calendars::channelId)
         .first::<String>(&mut db)
         .await;
 
@@ -45,7 +47,7 @@ pub async fn new(
 
     // Checking if the calendar is already present in db
     let res = calendars::calendars
-        .filter(calendars::googleid.eq(&calendar_id))
+        .filter(calendars::googleId.eq(&calendar_id))
         .select(calendars::id)
         .first::<i32>(&mut db)
         .await;
@@ -82,7 +84,7 @@ pub async fn new(
     let guild_id = ctx.guild_id().unwrap().get().to_string();
 
     let res = guilds::guilds
-        .filter(guilds::discordid.eq(guild_id.clone()))
+        .filter(guilds::discordId.eq(guild_id.clone()))
         .select(guilds::id)
         .first::<i32>(&mut db)
         .await;
@@ -90,7 +92,7 @@ pub async fn new(
     let guild_id = match res {
         Ok(id) => id,
         Err(_) => diesel::insert_into(guilds::guilds)
-            .values(guilds::discordid.eq(guild_id))
+            .values(guilds::discordId.eq(guild_id))
             .returning(guilds::id)
             .get_result::<i32>(&mut db)
             .await
@@ -100,7 +102,7 @@ pub async fn new(
     // Inserting calendar into db
     let db_cal_id = match db_cal_id {
         None => diesel::insert_into(calendars::calendars)
-            .values(calendars::googleid.eq(&calendar_id))
+            .values(calendars::googleId.eq(&calendar_id))
             .returning(calendars::id)
             .get_result::<i32>(&mut db)
             .await
@@ -113,7 +115,8 @@ pub async fn new(
         .values((
             guilds_calendars::guild_id.eq(guild_id),
             guilds_calendars::calendar_id.eq(db_cal_id),
-            guilds_calendars::channelid.eq(channel.id.get().to_string()),
+            guilds_calendars::channelId.eq(channel.id.get().to_string()),
+            guilds_calendars::timezone.eq(timezone.to_string()),
         ))
         .execute(&mut db)
         .await
