@@ -9,6 +9,7 @@ use crate::events::CalendarCommands;
 use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds::dsl as guilds;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
+use crate::types::TimezoneChoices;
 use crate::ApplicationContext;
 use anyhow::Result;
 use diesel::prelude::*;
@@ -23,6 +24,7 @@ pub async fn new(
     #[channel_types("Text")]
     #[description = "Channel (defaults to the current channel)"]
     channel: Option<serenity::GuildChannel>,
+    #[description = "Timezone (defaults to UTC)"] timezone: TimezoneChoices,
 ) -> Result<()> {
     let channel = match channel {
         Some(c) => c,
@@ -114,6 +116,7 @@ pub async fn new(
             guilds_calendars::guild_id.eq(guild_id),
             guilds_calendars::calendar_id.eq(db_cal_id),
             guilds_calendars::channelId.eq(channel.id.get().to_string()),
+            guilds_calendars::timezone.eq(timezone.to_string()),
         ))
         .execute(&mut db)
         .await

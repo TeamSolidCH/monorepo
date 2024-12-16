@@ -25,7 +25,7 @@ diesel::table! {
         #[max_length = 64]
         messageId -> Nullable<Varchar>,
         forceUpdate -> Bool,
-        #[max_length = 30]
+        #[max_length = 60]
         timezone -> Varchar,
         pollInterval -> Int4,
         nbDisplayedDays -> Int4,
@@ -37,4 +37,8 @@ diesel::table! {
 diesel::joinable!(guilds_calendars -> calendars (calendar_id));
 diesel::joinable!(guilds_calendars -> guilds (guild_id));
 
-diesel::allow_tables_to_appear_in_same_query!(calendars, guilds, guilds_calendars,);
+diesel::allow_tables_to_appear_in_same_query!(
+    calendars,
+    guilds,
+    guilds_calendars,
+);
