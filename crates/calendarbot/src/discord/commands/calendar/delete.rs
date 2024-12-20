@@ -29,8 +29,8 @@ pub async fn delete(
     let mut db = ctx.data().db.get().await.unwrap();
 
     let res = guilds_calendars::guilds_calendars
-        .filter(guilds_calendars::channelid.eq(channel.id.get().to_string()))
-        .select((guilds_calendars::calendar_id, guilds_calendars::messageid))
+        .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
+        .select((guilds_calendars::calendar_id, guilds_calendars::messageId))
         .first::<(i32, Option<String>)>(&mut db)
         .await;
 
@@ -56,7 +56,7 @@ pub async fn delete(
     // Remove the calendar from the database
     let del = diesel::delete(
         guilds_calendars::guilds_calendars
-            .filter(guilds_calendars::channelid.eq(channel.id.get().to_string())),
+            .filter(guilds_calendars::channelId.eq(channel.id.get().to_string())),
     )
     .execute(&mut db)
     .await;
@@ -70,7 +70,7 @@ pub async fn delete(
     // Remove the calendar from the database if it's not used anymore
     // (no other guild or channel is using it)
     let res = guilds_calendars::guilds_calendars
-        .filter(guilds_calendars::calendar_id.eq(calendar_id.clone()))
+        .filter(guilds_calendars::calendar_id.eq(calendar_id))
         .select(guilds_calendars::calendar_id)
         .first::<i32>(&mut db)
         .await;
