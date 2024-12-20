@@ -46,6 +46,7 @@ impl Discord {
                     commands::utilities::age(),
                     commands::calendar::new(),
                     commands::calendar::delete(),
+                    commands::calendar::set(),
                 ],
                 on_error: |error| Box::pin(async move { on_error(error).await }),
                 pre_command: |ctx| {

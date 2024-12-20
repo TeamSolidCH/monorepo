@@ -116,7 +116,7 @@ pub async fn new(
             guilds_calendars::guild_id.eq(guild_id),
             guilds_calendars::calendar_id.eq(db_cal_id),
             guilds_calendars::channelId.eq(channel.id.get().to_string()),
-            guilds_calendars::timezone.eq(timezone.to_string()),
+            guilds_calendars::timezone.eq(timezone.to_normalized_string()),
         ))
         .execute(&mut db)
         .await
