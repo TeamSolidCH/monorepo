@@ -13,7 +13,7 @@ use tokio::sync::mpsc::Receiver;
 use crate::discord::LocalCache;
 use crate::{discord::commands, discord::Discord, events::UpdateCalendarEvent, types};
 
-async fn on_error(error: poise::FrameworkError<'_, types::Data, Error>) {
+async fn on_error(error: poise::FrameworkError<'_, types::GlobalData, Error>) {
     // This is our custom error handler
     // They are many errors that can occur, so we only handle the ones we want to customize
     // and forward the rest to the default handler
@@ -34,7 +34,7 @@ impl Discord {
     pub async fn init(
         &mut self,
         calendar_rx: Receiver<UpdateCalendarEvent>,
-        data: types::Data,
+        data: types::GlobalData,
     ) -> serenity::Client {
         let cache_clone = self.cache.clone();
 

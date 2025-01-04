@@ -14,7 +14,7 @@ use diesel_async::RunQueryDsl;
 use log::{error, warn};
 use poise::serenity_prelude as serenity;
 
-#[poise::command(slash_command, guild_only, category = "Google calendar")]
+#[poise::command(slash_command, guild_only, category = "Google Calendar")]
 pub async fn delete(
     ctx: ApplicationContext<'_>,
     #[channel_types("Text")]

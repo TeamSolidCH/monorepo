@@ -24,8 +24,8 @@ use std::env;
 
 use dotenvy::dotenv;
 
-type Context<'a> = poise::Context<'a, types::Data, Error>;
-type ApplicationContext<'a> = poise::ApplicationContext<'a, types::Data, Error>;
+type Context<'a> = poise::Context<'a, types::GlobalData, Error>;
+type ApplicationContext<'a> = poise::ApplicationContext<'a, types::GlobalData, Error>;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
@@ -57,7 +57,7 @@ async fn main() {
         .expect("Unable to connect to google calendar")
         .init_threads(worker_thread_rx);
 
-    let data = types::Data::new(pool.clone(), gcalendar_tx).expect("Unable to load config!");
+    let data = types::GlobalData::new(pool.clone(), gcalendar_tx).expect("Unable to load config!");
 
     let mut client = discord::Discord::new(token, intents)
         .init(update_calendar_rx, data)
