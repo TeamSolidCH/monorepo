@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use chrono_tz::Tz;
 use google_calendar3::api::Event;
-use google_calendar3::chrono::{DateTime, Datelike, NaiveDate, Utc};
+use google_calendar3::chrono::{DateTime, Datelike, NaiveDate, TimeDelta, Utc};
 use log::warn;
 use poise::serenity_prelude as serenity;
 use std::collections::BTreeMap;
@@ -42,18 +42,6 @@ impl Ord for CalendarOptions {
             .cmp(&other.num_of_days)
             .then_with(|| self.skip_weekend.cmp(&other.skip_weekend))
             .then_with(|| self.show_if_no_events.cmp(&other.show_if_no_events))
-    }
-}
-
-impl CalendarOptions {
-    fn to_guild_calendar(&self, base_calendar: GuildCalendar) -> GuildCalendar {
-        let mut new_calendar = base_calendar;
-        new_calendar.timezone = self.timezone.to_string();
-        new_calendar.skipWeekend = self.skip_weekend;
-        new_calendar.skipEmptyDays = !self.show_if_no_events;
-        new_calendar.nbDisplayedDays = self.num_of_days;
-
-        new_calendar
     }
 }
 
@@ -106,6 +94,19 @@ impl CalendarEvent {
 
             let start_date = start_date.unwrap().with_timezone(&options.timezone);
             let end_date = end_date.unwrap().with_timezone(&options.timezone);
+
+            if options.skip_weekend
+                && (start_date.weekday().number_from_monday() > 5
+                    || end_date.weekday().number_from_monday() > 5)
+            {
+                continue;
+            }
+
+            if start_date.date_naive() - Utc::now().date_naive()
+                > TimeDelta::days(options.num_of_days.into())
+            {
+                continue;
+            }
 
             sorted
                 .entry((start_date.date_naive(), end_date.date_naive()))

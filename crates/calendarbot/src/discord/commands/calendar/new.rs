@@ -25,6 +25,7 @@ pub async fn new(
     #[description = "Channel (defaults to the current channel)"]
     channel: Option<serenity::GuildChannel>,
     #[description = "Timezone (defaults to UTC)"] timezone: TimezoneChoices,
+    #[description = "Number of days to display"] num_displayed_days: Option<u8>,
 ) -> Result<()> {
     let channel = match channel {
         Some(c) => c,
@@ -117,6 +118,7 @@ pub async fn new(
             guilds_calendars::calendar_id.eq(db_cal_id),
             guilds_calendars::channelId.eq(channel.id.get().to_string()),
             guilds_calendars::timezone.eq(timezone.to_normalized_string()),
+            guilds_calendars::nbDisplayedDays.eq(num_displayed_days.unwrap_or(7) as i32),
         ))
         .execute(&mut db)
         .await

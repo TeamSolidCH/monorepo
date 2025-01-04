@@ -66,7 +66,7 @@ async fn update_settings(
     slash_command,
     guild_only,
     category = "Google calendar",
-    subcommands("timezone"),
+    subcommands("timezone", "nb_displayed_days"),
     subcommand_required
 )]
 pub async fn set(_: ApplicationContext<'_>) -> Result<()> {
@@ -120,4 +120,44 @@ pub async fn timezone(
         }
         Err(e) => Err(e),
     }
+}
+
+#[poise::command(slash_command, guild_only, category = "Google calendar")]
+pub async fn nb_displayed_days(
+    ctx: ApplicationContext<'_>,
+    #[description = "Days (defaults to UTC)"] days: u8,
+) -> Result<()> {
+    let channel = ctx.guild_channel().await.unwrap();
+    let mut db = ctx.data().db.get().await.unwrap();
+
+    let res = guilds_calendars::guilds_calendars
+        .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
+        .select(guilds_calendars::nbDisplayedDays)
+        .first::<String>(&mut db)
+        .await;
+
+    if let Err(e) = res {
+        match e {
+            diesel::result::Error::NotFound => {
+                let _ = ctx.reply("This channel doesn't have a calendar").await?;
+                return Ok(());
+            }
+            _ => return Err(e.into()),
+        }
+    }
+    let old_nb_displayed_days = res.unwrap().parse::<u8>().unwrap();
+
+    if old_nb_displayed_days == days {
+        let _ = ctx
+            .reply("Number of displayed days already set to this value")
+            .await?;
+        return Ok(());
+    }
+
+    trace!(
+        "Changing number of displayed days from {:?} to {:?} for channel {:?}",
+        old_nb_displayed_days,
+        days,
+        channel.id.get()
+    );
 }
