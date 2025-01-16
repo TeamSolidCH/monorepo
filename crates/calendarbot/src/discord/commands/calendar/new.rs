@@ -32,7 +32,7 @@ pub async fn new(
         None => ctx.guild_channel().await.unwrap(),
     };
 
-    let mut db = ctx.data().db.get().await.unwrap();
+    let mut db = ctx.data().db.get().await?;
 
     // Checking if the channel as calendar
     let res = guilds_calendars::guilds_calendars
@@ -68,9 +68,9 @@ pub async fn new(
             resp: resp_tx,
         };
 
-        ctx.defer().await.unwrap();
+        ctx.defer().await?;
 
-        ctx.data().gcalendar_tx.clone().send(cmd).await.unwrap();
+        ctx.data().gcalendar_tx.clone().send(cmd).await?;
 
         let is_valid = resp_rx.await.unwrap_or(Ok(false)).unwrap_or(false);
 
@@ -96,8 +96,7 @@ pub async fn new(
             .values(guilds::discordId.eq(guild_id))
             .returning(guilds::id)
             .get_result::<i32>(&mut db)
-            .await
-            .expect("Unable to insert guild into database"),
+            .await?,
     };
 
     // Inserting calendar into db
@@ -106,8 +105,7 @@ pub async fn new(
             .values(calendars::googleId.eq(&calendar_id))
             .returning(calendars::id)
             .get_result::<i32>(&mut db)
-            .await
-            .expect("Unable to insert calendar into database"),
+            .await?,
         Some(id) => id,
     };
 
@@ -121,8 +119,7 @@ pub async fn new(
             guilds_calendars::nbDisplayedDays.eq(num_displayed_days.unwrap_or(7) as i32),
         ))
         .execute(&mut db)
-        .await
-        .expect("Unable to insert guild_calendar into database");
+        .await?;
 
     ctx.send(
         poise::CreateReply::default()

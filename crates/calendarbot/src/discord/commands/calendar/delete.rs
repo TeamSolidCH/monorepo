@@ -26,7 +26,7 @@ pub async fn delete(
         None => ctx.guild_channel().await.unwrap(),
     };
 
-    let mut db = ctx.data().db.get().await.unwrap();
+    let mut db = ctx.data().db.get().await?;
 
     let res = guilds_calendars::guilds_calendars
         .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
@@ -38,13 +38,13 @@ pub async fn delete(
         let _ = ctx.reply("This channel doesn't have a calendar").await?;
         return Ok(());
     }
-    let res = res.unwrap();
+    let res = res?;
 
     let calendar_id = res.0;
 
     // Deleting the calendar message
     if let Some(message_id) = res.1 {
-        let message_id = serenity::MessageId::new(message_id.parse::<u64>().unwrap());
+        let message_id = serenity::MessageId::new(message_id.parse::<u64>()?);
 
         let res = channel.delete_messages(&ctx.http(), vec![message_id]).await;
 
@@ -93,8 +93,7 @@ pub async fn delete(
             .reply(true)
             .ephemeral(true),
     )
-    .await
-    .unwrap();
+    .await?;
 
     Ok(())
 }

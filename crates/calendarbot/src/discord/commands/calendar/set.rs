@@ -18,13 +18,9 @@ async fn update_settings(
     let default_values = guilds_calendars::guilds_calendars
         .filter(guilds_calendars::channelId.eq(channel_id.to_string()))
         .first::<GuildCalendar>(db)
-        .await;
+        .await?;
 
-    if let Err(e) = default_values {
-        return Err(e.into());
-    }
-
-    let mut values = default_values.unwrap();
+    let mut values = default_values;
 
     if let Some(timezone) = timezone {
         values.timezone = timezone;
@@ -42,7 +38,7 @@ async fn update_settings(
         values.skipEmptyDays = skip_empty_days;
     }
 
-    let res = diesel::update(
+    diesel::update(
         guilds_calendars::guilds_calendars
             .filter(guilds_calendars::channelId.eq(channel_id.to_string())),
     )
@@ -54,12 +50,7 @@ async fn update_settings(
         guilds_calendars::forceUpdate.eq(true),
     ))
     .execute(db)
-    .await;
-
-    match res {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.into()),
-    }
+    .await?.into()
 }
 
 #[poise::command(
@@ -89,15 +80,15 @@ pub async fn timezone(
         .await;
 
     if let Err(e) = res {
-        match e {
+        return match e {
             diesel::result::Error::NotFound => {
                 let _ = ctx.reply("This channel doesn't have a calendar").await?;
-                return Ok(());
+                Ok(())
             }
-            _ => return Err(e.into()),
+            _ => Err(e.into()),
         }
     }
-    let old_timezone = res.unwrap();
+    let old_timezone = res?;
 
     if old_timezone == timezone {
         let _ = ctx.reply("Timezone already set to this value").await?;
@@ -127,8 +118,8 @@ pub async fn nb_displayed_days(
     ctx: ApplicationContext<'_>,
     #[description = "Days (defaults to UTC)"] days: u8,
 ) -> Result<()> {
-    let channel = ctx.guild_channel().await.unwrap();
-    let mut db = ctx.data().db.get().await.unwrap();
+    let channel = ctx.guild_channel().await?;
+    let mut db = ctx.data().db.get().await?;
 
     let res = guilds_calendars::guilds_calendars
         .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
@@ -137,15 +128,15 @@ pub async fn nb_displayed_days(
         .await;
 
     if let Err(e) = res {
-        match e {
+        return match e {
             diesel::result::Error::NotFound => {
                 let _ = ctx.reply("This channel doesn't have a calendar").await?;
-                return Ok(());
+                Ok(())
             }
-            _ => return Err(e.into()),
+            _ => Err(e.into()),
         }
     }
-    let old_nb_displayed_days = res.unwrap().parse::<u8>().unwrap();
+    let old_nb_displayed_days = res?.parse::<u8>()?;
 
     if old_nb_displayed_days == days {
         let _ = ctx
