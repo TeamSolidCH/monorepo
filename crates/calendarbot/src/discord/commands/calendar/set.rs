@@ -3,11 +3,10 @@ use crate::schema::guilds_calendars as guilds_calendars_all;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
 use crate::types::TimezoneChoices;
 use crate::ApplicationContext;
-use anyhow::{anyhow, Chain, Result};
+use anyhow::{anyhow, Result};
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use log::trace;
-use poise::serenity_prelude::prelude::SerenityError;
 
 async fn update_settings(
     db: &mut AsyncPgConnection,

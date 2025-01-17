@@ -35,7 +35,7 @@ impl GCalendar {
     }
 
     pub(crate) fn new_worker_thread(self, mut rcv: Receiver<CalendarCommands>) -> Self {
-        let mut self_clone = self.clone();
+        let self_clone = self.clone();
         info!("Starting worker thread");
         tokio::spawn(async move {
             while let Some(cmd) = rcv.recv().await {
