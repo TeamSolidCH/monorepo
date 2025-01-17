@@ -101,7 +101,7 @@ where
     slash_command,
     guild_only,
     category = "Google calendar",
-    subcommands("timezone", "nb_displayed_days"),
+    subcommands("timezone", "nb_displayed_days", "skip_weekend"),
     subcommand_required
 )]
 pub async fn set(_: ApplicationContext<'_>) -> Result<()> {
@@ -192,5 +192,51 @@ pub async fn nb_displayed_days(
     .await
     .map_err(|e| anyhow!(e))?;
     let _ = ctx.reply("Number of displayed days updated").await?;
+    Ok(())
+}
+
+#[poise::command(slash_command, guild_only, category = "Google calendar")]
+pub async fn skip_weekend(
+    ctx: ApplicationContext<'_>,
+    #[description = "Skip weekends"] skip_weekend: bool,
+) -> Result<()>
+{
+    let channel = ctx.guild_channel().await;
+    let channel = channel.ok_or_else(|| anyhow!("Channel not found"))?;
+    let mut db = ctx.data().db.get().await?;
+
+    let  old_skip_weekend: bool = get_settings(
+        &mut db,
+        &ctx,
+        channel.id.get().to_string(),
+        guilds_calendars::skipWeekend,
+    )
+        .await?;
+
+
+    if old_skip_weekend == skip_weekend {
+        let _ = ctx
+            .reply("Skip weekends already set to this value")
+            .await?;
+        return Ok(());
+    }
+
+    trace!(
+        "Changing skip weekends from {:?} to {:?} for channel {:?}",
+        old_skip_weekend,
+        skip_weekend,
+        channel.id.get()
+    );
+
+    update_settings( &mut db,
+        channel.id.get(),
+        None,
+        None,
+        Some(skip_weekend),
+        None,
+    )
+        .await
+        .map_err(|e| anyhow!(e))?;
+    let _ = ctx.reply("Skip weekends updated").await?;
     Ok(())
 }
