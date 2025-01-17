@@ -1,11 +1,13 @@
 use crate::models::GuildCalendar;
+use crate::schema::guilds_calendars as guilds_calendars_all;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
 use crate::types::TimezoneChoices;
 use crate::ApplicationContext;
-use anyhow::Result;
+use anyhow::{anyhow, Chain, Result};
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use log::trace;
+use poise::serenity_prelude::prelude::SerenityError;
 
 async fn update_settings(
     db: &mut AsyncPgConnection,
@@ -38,7 +40,7 @@ async fn update_settings(
         values.skipEmptyDays = skip_empty_days;
     }
 
-    diesel::update(
+    match diesel::update(
         guilds_calendars::guilds_calendars
             .filter(guilds_calendars::channelId.eq(channel_id.to_string())),
     )
@@ -50,7 +52,48 @@ async fn update_settings(
         guilds_calendars::forceUpdate.eq(true),
     ))
     .execute(db)
-    .await?.into()
+    .await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e.into()),
+    }
+}
+
+async fn get_settings<CSelect, T>(
+    connection: &mut diesel_async::AsyncPgConnection,
+    ctx: &ApplicationContext<'_>,
+    channel_id: String,
+    column: CSelect,
+) -> Result<T>
+where
+    CSelect: diesel::Expression
+    + diesel::SelectableExpression<guilds_calendars_all::table>
+    + diesel::AppearsOnTable<guilds_calendars_all::table>
+    + diesel::expression::ValidGrouping<()>
+    + Send + 'static
+    + diesel::query_builder::QueryId
+    + diesel::query_builder::QueryFragment<diesel::pg::Pg>,
+    diesel::pg::Pg: diesel::sql_types::HasSqlType<CSelect::SqlType>,
+    CSelect::SqlType: diesel::sql_types::SingleValue, // Ensures column returns a single value
+    T: diesel::Queryable<CSelect::SqlType, diesel::pg::Pg> + Send + 'static, // Ensure T matches the SQL type
+{
+    // Perform the query
+    let result = guilds_calendars_all::table
+        .filter(guilds_calendars::channelId.eq(channel_id))
+        .select(column)
+        .first::<T>(connection)
+        .await;
+
+    // Handle the result and reply to the context if needed
+    match result {
+        Ok(value) => Ok(value),
+        Err(diesel::result::Error::NotFound) => {
+            ctx.reply("This channel doesn't have a calendar")
+                .await
+                .map_err(|e| anyhow!(e))?; // Handle the reply error
+            Err(diesel::result::Error::NotFound.into())
+        }
+        Err(e) => Err(e.into()),
+    }
 }
 
 #[poise::command(
@@ -71,25 +114,9 @@ pub async fn timezone(
 ) -> Result<()> {
     let channel = ctx.guild_channel().await.unwrap();
     let timezone = timezone.to_normalized_string();
-    let mut db = ctx.data().db.get().await.unwrap();
+    let mut db = ctx.data().db.get().await?;
 
-    let res = guilds_calendars::guilds_calendars
-        .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
-        .select(guilds_calendars::timezone)
-        .first::<String>(&mut db)
-        .await;
-
-    if let Err(e) = res {
-        return match e {
-            diesel::result::Error::NotFound => {
-                let _ = ctx.reply("This channel doesn't have a calendar").await?;
-                Ok(())
-            }
-            _ => Err(e.into()),
-        }
-    }
-    let old_timezone = res?;
-
+    let old_timezone: String = get_settings(&mut db, &ctx, channel.id.get().to_string(), guilds_calendars::timezone).await?;
     if old_timezone == timezone {
         let _ = ctx.reply("Timezone already set to this value").await?;
         return Ok(());
@@ -118,25 +145,13 @@ pub async fn nb_displayed_days(
     ctx: ApplicationContext<'_>,
     #[description = "Days (defaults to UTC)"] days: u8,
 ) -> Result<()> {
-    let channel = ctx.guild_channel().await?;
+    let channel = ctx.guild_channel().await;
+    let channel = channel.ok_or_else(|| anyhow!("Channel not found"))?;
     let mut db = ctx.data().db.get().await?;
 
-    let res = guilds_calendars::guilds_calendars
-        .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
-        .select(guilds_calendars::nbDisplayedDays)
-        .first::<String>(&mut db)
-        .await;
+    let res :i32 = get_settings(&mut db, &ctx, channel.id.get().to_string(), guilds_calendars::nbDisplayedDays).await?;
 
-    if let Err(e) = res {
-        return match e {
-            diesel::result::Error::NotFound => {
-                let _ = ctx.reply("This channel doesn't have a calendar").await?;
-                Ok(())
-            }
-            _ => Err(e.into()),
-        }
-    }
-    let old_nb_displayed_days = res?.parse::<u8>()?;
+    let old_nb_displayed_days = u8::try_from(res).map_err(|_| anyhow!("Number of displayed days is too big"))?;
 
     if old_nb_displayed_days == days {
         let _ = ctx
@@ -151,4 +166,8 @@ pub async fn nb_displayed_days(
         days,
         channel.id.get()
     );
+
+    update_settings(&mut db, channel.id.get(), None, Some(days as i32), None, None).await.map_err(|e| anyhow!(e))?;
+    let _ = ctx.reply("Number of displayed days updated").await?;
+    Ok(())
 }
