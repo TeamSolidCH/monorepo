@@ -2,10 +2,10 @@ use anyhow::anyhow;
 use chrono_tz::Tz;
 use google_calendar3::api::Event;
 use google_calendar3::chrono::{DateTime, Datelike, NaiveDate, TimeDelta, Utc};
-use log::warn;
+use log::{trace, warn};
 use poise::serenity_prelude as serenity;
 use std::collections::BTreeMap;
-
+use workdays::WorkCalendar;
 use crate::models::GuildCalendar;
 
 #[derive(Debug, Copy, Clone)]
@@ -77,6 +77,14 @@ impl CalendarEvent {
     pub fn to_embed(events: Vec<Self>, options: CalendarOptions) -> serenity::CreateEmbed {
         let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<CalendarEvent>> = BTreeMap::new();
         let mut fields: Vec<(String, String, bool)> = vec![];
+        let today_date = Utc::now().with_timezone(&options.timezone).date_naive();
+        let mut calendar = WorkCalendar::new();
+        calendar.set_work_days("Mon,Tue,Wed,Thu,Fri").unwrap();
+
+        let mut last_date = today_date + TimeDelta::days(options.num_of_days.into());
+        if options.skip_weekend {
+            last_date = calendar.compute_end_date(today_date, options.num_of_days as i64).unwrap().0;
+        }
 
         for ele in events {
             let ele_clone = ele.clone();
@@ -95,15 +103,14 @@ impl CalendarEvent {
             let start_date = start_date.unwrap().with_timezone(&options.timezone);
             let end_date = end_date.unwrap().with_timezone(&options.timezone);
 
-            if options.skip_weekend
-                && (start_date.weekday().number_from_monday() > 5
-                    || end_date.weekday().number_from_monday() > 5)
+            // Skip weekend
+            if options.skip_weekend && (start_date.weekday().number_from_monday() > 5
+                || end_date.weekday().number_from_monday() > 5)
             {
                 continue;
             }
 
-            if start_date.date_naive() - Utc::now().date_naive()
-                > TimeDelta::days(options.num_of_days.into())
+            if start_date.date_naive() >  last_date
             {
                 continue;
             }
@@ -119,10 +126,21 @@ impl CalendarEvent {
             // we check for each day until numDisplayedDays if there is something in sorted
             // This is a naive way to do this since sorted could contain events with two dates
             let today = Utc::now().with_timezone(&options.timezone).date_naive();
-            for i in 0..options.num_of_days {
+            let mut num_of_days = options.num_of_days;
+            if options.skip_weekend {
+                num_of_days = calendar.compute_end_date(today, options.num_of_days as i64).unwrap().0.signed_duration_since(today).num_days() as i32+1;
+            }
+            // Add weekends to num_of_days since we will skip them but will have other date after
+
+            for i in 0..num_of_days {
                 let date = today + TimeDelta::days(i.into());
-                if sorted.get(&(date, date)).is_none() {
-                    sorted.insert((date, date), vec![]);
+
+                if options.skip_weekend && date.weekday().number_from_monday() > 5 {
+                    continue;
+                }
+
+                if !sorted.contains_key(&(date, date)) {
+                    sorted.entry((date, date)).or_insert_with(|| Vec::new());
                 }
             }
         }
@@ -136,15 +154,15 @@ impl CalendarEvent {
 
             // Skip if we already passed this day and there are no events (it means that this was added for show_if_no_events)
             if (passed_dates.contains(start_date) || passed_dates.contains(end_date))
-                && !options.show_if_no_events
+                && options.show_if_no_events
                 && events.is_empty()
             {
                 continue;
             }
 
-            passed_dates.push(start_date.clone());
+            passed_dates.push(*start_date);
             if start_date != end_date {
-                passed_dates.push(end_date.clone());
+                passed_dates.push(*end_date);
             }
 
             for event in events {

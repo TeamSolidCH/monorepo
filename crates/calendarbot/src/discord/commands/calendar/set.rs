@@ -255,7 +255,7 @@ pub async fn show_if_no_events(
     )
     .await?;
 
-    if !old_skip_empty_days == show_if_no_events {
+    if old_skip_empty_days != show_if_no_events {
         let _ = ctx
             .reply("Show if no events already set to this value")
             .await?;
