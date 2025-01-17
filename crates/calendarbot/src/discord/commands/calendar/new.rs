@@ -25,8 +25,10 @@ pub async fn new(
     #[description = "Channel (defaults to the current channel)"]
     channel: Option<serenity::GuildChannel>,
     #[description = "Timezone (defaults to UTC)"] timezone: TimezoneChoices,
-    #[description = "Number of days to display"] num_displayed_days: Option<u8>,
-    #[description = "Skip weekends"] skip_weekend: Option<bool>
+    #[description = "Number of days to display (defaults to 8)"] num_displayed_days: Option<u8>,
+    #[description = "Skip weekends (default to false)"] skip_weekend: Option<bool>,
+    #[description = "Show days if there are no events (defaults to false)"]
+    show_if_no_events: Option<bool>,
 ) -> Result<()> {
     let channel = match channel {
         Some(c) => c,
@@ -122,7 +124,8 @@ pub async fn new(
             guilds_calendars::channelId.eq(channel.id.get().to_string()),
             guilds_calendars::timezone.eq(timezone.to_normalized_string()),
             guilds_calendars::nbDisplayedDays.eq(num_displayed_days.unwrap_or(7) as i32),
-            guilds_calendars::skipWeekend.eq(skip_weekend.unwrap_or(false))
+            guilds_calendars::skipWeekend.eq(skip_weekend.unwrap_or(false)),
+            guilds_calendars::skipEmptyDays.eq(!show_if_no_events.unwrap_or(true)),
         ))
         .execute(&mut db)
         .await?;

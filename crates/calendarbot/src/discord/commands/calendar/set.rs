@@ -101,7 +101,7 @@ where
     slash_command,
     guild_only,
     category = "Google calendar",
-    subcommands("timezone", "nb_displayed_days", "skip_weekend"),
+    subcommands("timezone", "nb_displayed_days", "skip_weekend", "show_if_no_events"),
     subcommand_required
 )]
 pub async fn set(_: ApplicationContext<'_>) -> Result<()> {
@@ -199,25 +199,21 @@ pub async fn nb_displayed_days(
 pub async fn skip_weekend(
     ctx: ApplicationContext<'_>,
     #[description = "Skip weekends"] skip_weekend: bool,
-) -> Result<()>
-{
+) -> Result<()> {
     let channel = ctx.guild_channel().await;
     let channel = channel.ok_or_else(|| anyhow!("Channel not found"))?;
     let mut db = ctx.data().db.get().await?;
 
-    let  old_skip_weekend: bool = get_settings(
+    let old_skip_weekend: bool = get_settings(
         &mut db,
         &ctx,
         channel.id.get().to_string(),
         guilds_calendars::skipWeekend,
     )
-        .await?;
-
+    .await?;
 
     if old_skip_weekend == skip_weekend {
-        let _ = ctx
-            .reply("Skip weekends already set to this value")
-            .await?;
+        let _ = ctx.reply("Skip weekends already set to this value").await?;
         return Ok(());
     }
 
@@ -228,15 +224,61 @@ pub async fn skip_weekend(
         channel.id.get()
     );
 
-    update_settings( &mut db,
+    update_settings(
+        &mut db,
         channel.id.get(),
         None,
         None,
         Some(skip_weekend),
         None,
     )
-        .await
-        .map_err(|e| anyhow!(e))?;
+    .await
+    .map_err(|e| anyhow!(e))?;
     let _ = ctx.reply("Skip weekends updated").await?;
+    Ok(())
+}
+
+#[poise::command(slash_command, guild_only, category = "Google calendar")]
+pub async fn show_if_no_events(
+    ctx: ApplicationContext<'_>,
+    #[description = "Show days if there are no events"] show_if_no_events: bool,
+) -> Result<()> {
+    let channel = ctx.guild_channel().await;
+    let channel = channel.ok_or_else(|| anyhow!("Channel not found"))?;
+    let mut db = ctx.data().db.get().await?;
+
+    let old_skip_empty_days: bool = get_settings(
+        &mut db,
+        &ctx,
+        channel.id.get().to_string(),
+        guilds_calendars::skipEmptyDays,
+    )
+    .await?;
+
+    if !old_skip_empty_days == show_if_no_events {
+        let _ = ctx
+            .reply("Show if no events already set to this value")
+            .await?;
+        return Ok(());
+    }
+
+    trace!(
+        "Change show if no events from {:?} to {:?} for channel {:?}",
+        !old_skip_empty_days,
+        show_if_no_events,
+        channel.id.get()
+    );
+
+    update_settings(
+        &mut db,
+        channel.id.get(),
+        None,
+        None,
+        None,
+        Some(!show_if_no_events),
+    )
+    .await
+    .map_err(|e| anyhow!(e))?;
+    let _ = ctx.reply("Show if no events updated").await?;
     Ok(())
 }

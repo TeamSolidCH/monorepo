@@ -114,8 +114,39 @@ impl CalendarEvent {
                 .push(ele);
         }
 
+        // Process show if no events
+        if options.show_if_no_events {
+            // we check for each day until numDisplayedDays if there is something in sorted
+            // This is a naive way to do this since sorted could contain events with two dates
+            let today = Utc::now().with_timezone(&options.timezone).date_naive();
+            for i in 0..options.num_of_days {
+                let date = today + TimeDelta::days(i.into());
+                if sorted.get(&(date, date)).is_none() {
+                    sorted.insert((date, date), vec![]);
+                }
+            }
+        }
+
+        // This array stores which dates have been processed.
+        // This allows show_if_no_events to work as intended if some events are on multiple days
+        let mut passed_dates = vec![];
+
         for ((start_date, end_date), events) in sorted.iter() {
             let mut field = String::new();
+
+            // Skip if we already passed this day and there are no events (it means that this was added for show_if_no_events)
+            if (passed_dates.contains(start_date) || passed_dates.contains(end_date))
+                && !options.show_if_no_events
+                && events.is_empty()
+            {
+                continue;
+            }
+
+            passed_dates.push(start_date.clone());
+            if start_date != end_date {
+                passed_dates.push(end_date.clone());
+            }
+
             for event in events {
                 if event.start.is_none() {
                     warn!("Event start is None");
@@ -131,11 +162,14 @@ impl CalendarEvent {
                 let end = event.end.unwrap().with_timezone(&options.timezone);
 
                 field.push_str(&format!(
-                    "```{} - {} | {}```\n",
+                    "{} - {} | {}\n",
                     start.format("%H:%M"),
                     end.format("%H:%M"),
                     event.summary.clone()
                 ));
+            }
+            if events.is_empty() {
+                field = String::from("No events");
             }
             let mut format = String::from("**%A** - %e %B");
             if start_date.year() != end_date.year() || start_date.year() != Utc::now().year() {
@@ -152,7 +186,7 @@ impl CalendarEvent {
                 );
             }
 
-            fields.push((key, field, false));
+            fields.push((key, format!("```{}```", field), false));
         }
 
         serenity::CreateEmbed::new().title("Events").fields(fields)
