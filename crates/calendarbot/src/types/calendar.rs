@@ -149,7 +149,7 @@ impl CalendarEvent {
                 }
 
                 if !sorted.contains_key(&(date, date)) {
-                    sorted.entry((date, date)).or_insert_with(Vec::new);
+                    sorted.entry((date, date)).or_default();
                 }
             }
         }
