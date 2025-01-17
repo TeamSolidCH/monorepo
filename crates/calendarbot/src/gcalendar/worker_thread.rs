@@ -12,7 +12,7 @@ use regex::Regex;
 use tokio::sync::mpsc::Receiver;
 
 impl GCalendar {
-    async fn is_calendar_id_valid_and_accessible(self: &Self, calendar_id: &str) -> bool {
+    async fn is_calendar_id_valid_and_accessible(&self, calendar_id: &str) -> bool {
         static CALENDAR_ID_REGEX: &str = r"^(\w+\.){0,3}\w+@(\w+\.){0,3}\w+$";
 
         let re = Regex::new(CALENDAR_ID_REGEX).unwrap();
