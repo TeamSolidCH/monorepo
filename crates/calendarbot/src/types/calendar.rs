@@ -1,12 +1,12 @@
+use crate::models::GuildCalendar;
 use anyhow::anyhow;
 use chrono_tz::Tz;
 use google_calendar3::api::Event;
 use google_calendar3::chrono::{DateTime, Datelike, NaiveDate, TimeDelta, Utc};
-use log::{trace, warn};
+use log::warn;
 use poise::serenity_prelude as serenity;
 use std::collections::BTreeMap;
 use workdays::WorkCalendar;
-use crate::models::GuildCalendar;
 
 #[derive(Debug, Copy, Clone)]
 pub enum CalendarEventSource {
@@ -83,7 +83,10 @@ impl CalendarEvent {
 
         let mut last_date = today_date + TimeDelta::days(options.num_of_days.into());
         if options.skip_weekend {
-            last_date = calendar.compute_end_date(today_date, options.num_of_days as i64).unwrap().0;
+            last_date = calendar
+                .compute_end_date(today_date, options.num_of_days as i64)
+                .unwrap()
+                .0;
         }
 
         for ele in events {
@@ -104,14 +107,14 @@ impl CalendarEvent {
             let end_date = end_date.unwrap().with_timezone(&options.timezone);
 
             // Skip weekend
-            if options.skip_weekend && (start_date.weekday().number_from_monday() > 5
-                || end_date.weekday().number_from_monday() > 5)
+            if options.skip_weekend
+                && (start_date.weekday().number_from_monday() > 5
+                    || end_date.weekday().number_from_monday() > 5)
             {
                 continue;
             }
 
-            if start_date.date_naive() >  last_date
-            {
+            if start_date.date_naive() > last_date {
                 continue;
             }
 
@@ -128,7 +131,13 @@ impl CalendarEvent {
             let today = Utc::now().with_timezone(&options.timezone).date_naive();
             let mut num_of_days = options.num_of_days;
             if options.skip_weekend {
-                num_of_days = calendar.compute_end_date(today, options.num_of_days as i64).unwrap().0.signed_duration_since(today).num_days() as i32+1;
+                num_of_days = calendar
+                    .compute_end_date(today, options.num_of_days as i64)
+                    .unwrap()
+                    .0
+                    .signed_duration_since(today)
+                    .num_days() as i32
+                    + 1;
             }
             // Add weekends to num_of_days since we will skip them but will have other date after
 
@@ -140,7 +149,7 @@ impl CalendarEvent {
                 }
 
                 if !sorted.contains_key(&(date, date)) {
-                    sorted.entry((date, date)).or_insert_with(|| Vec::new());
+                    sorted.entry((date, date)).or_insert_with(Vec::new);
                 }
             }
         }
