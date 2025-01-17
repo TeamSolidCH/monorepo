@@ -92,20 +92,24 @@ pub async fn new(
 
     let guild_id = match res {
         Ok(id) => id,
-        Err(_) => diesel::insert_into(guilds::guilds)
-            .values(guilds::discordId.eq(guild_id))
-            .returning(guilds::id)
-            .get_result::<i32>(&mut db)
-            .await?,
+        Err(_) => {
+            diesel::insert_into(guilds::guilds)
+                .values(guilds::discordId.eq(guild_id))
+                .returning(guilds::id)
+                .get_result::<i32>(&mut db)
+                .await?
+        }
     };
 
     // Inserting calendar into db
     let db_cal_id = match db_cal_id {
-        None => diesel::insert_into(calendars::calendars)
-            .values(calendars::googleId.eq(&calendar_id))
-            .returning(calendars::id)
-            .get_result::<i32>(&mut db)
-            .await?,
+        None => {
+            diesel::insert_into(calendars::calendars)
+                .values(calendars::googleId.eq(&calendar_id))
+                .returning(calendars::id)
+                .get_result::<i32>(&mut db)
+                .await?
+        }
         Some(id) => id,
     };
 

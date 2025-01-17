@@ -99,25 +99,27 @@ impl Discord {
                         Err(e) => {
                             error!("Failed to send or edit message: {}, calendar: {}, channel_id: {:?}, message_id: {:?}", e, event.calendar_id, channel_id, message_id);
                         }
-                        Ok(msg_id) => if Some(msg_id.get()) != message_id {
-                            let db_cal_id = calendars::calendars
-                                .filter(calendars::googleId.eq(event.calendar_id.clone()))
-                                .select(calendars::id)
-                                .first::<i32>(&mut db)
-                                .await
-                                .expect("Unable to get calendar id from database");
+                        Ok(msg_id) => {
+                            if Some(msg_id.get()) != message_id {
+                                let db_cal_id = calendars::calendars
+                                    .filter(calendars::googleId.eq(event.calendar_id.clone()))
+                                    .select(calendars::id)
+                                    .first::<i32>(&mut db)
+                                    .await
+                                    .expect("Unable to get calendar id from database");
 
-                            diesel::update(guilds_calendars::guilds_calendars)
-                                .filter(
-                                    guilds_calendars::channelId
-                                        .eq(channel_id.to_string())
-                                        .and(guilds_calendars::calendar_id.eq(db_cal_id)),
-                                )
-                                .set(guilds_calendars::messageId.eq(msg_id.get().to_string()))
-                                .execute(&mut db)
-                                .await
-                                .expect("Unable to update message id in database");
-                        },
+                                diesel::update(guilds_calendars::guilds_calendars)
+                                    .filter(
+                                        guilds_calendars::channelId
+                                            .eq(channel_id.to_string())
+                                            .and(guilds_calendars::calendar_id.eq(db_cal_id)),
+                                    )
+                                    .set(guilds_calendars::messageId.eq(msg_id.get().to_string()))
+                                    .execute(&mut db)
+                                    .await
+                                    .expect("Unable to update message id in database");
+                            }
+                        }
                     };
                 }
             }
