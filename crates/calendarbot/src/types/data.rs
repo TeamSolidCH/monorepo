@@ -4,7 +4,7 @@ Calendarbot  Copyright (C) 2023 Zbinden Yohan
 This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
 This is free software, and you are welcome to redistribute it
  */
-
+use crate::events::CalendarCommands;
 use anyhow::{Error, Result};
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
@@ -12,9 +12,8 @@ use poise::serenity_prelude as serenity;
 use std::env;
 use tokio::sync::mpsc::Sender;
 
-use crate::events::CalendarCommands;
-
-pub struct Data {
+/// Global data that is shared across all commands and events
+pub struct GlobalData {
     pub application_id: serenity::UserId,
     pub client_id: serenity::UserId,
     pub bot_start_time: std::time::Instant,
@@ -22,11 +21,11 @@ pub struct Data {
     pub gcalendar_tx: Sender<CalendarCommands>,
 }
 
-impl Data {
+impl GlobalData {
     pub fn new(
         db_connection: Pool<AsyncPgConnection>,
         gcalendar_tx: Sender<CalendarCommands>,
-    ) -> Result<Data> {
+    ) -> Result<GlobalData> {
         Ok(Self {
             application_id: env::var("APPLICATION_ID")
                 .expect("APPLICATION_ID not found")
@@ -43,6 +42,6 @@ impl Data {
     }
 }
 
-pub type Context<'a> = poise::Context<'a, Data, Error>;
+pub type Context<'a> = poise::Context<'a, GlobalData, Error>;
 
 pub const EMBED_COLOR: (u8, u8, u8) = (0xb7, 0x47, 0x00);

@@ -12,7 +12,7 @@ use regex::Regex;
 use tokio::sync::mpsc::Receiver;
 
 impl GCalendar {
-    async fn is_calendar_id_valid_and_accessible(&mut self, calendar_id: &str) -> bool {
+    async fn is_calendar_id_valid_and_accessible(&self, calendar_id: &str) -> bool {
         static CALENDAR_ID_REGEX: &str = r"^(\w+\.){0,3}\w+@(\w+\.){0,3}\w+$";
 
         let re = Regex::new(CALENDAR_ID_REGEX).unwrap();
@@ -35,7 +35,7 @@ impl GCalendar {
     }
 
     pub(crate) fn new_worker_thread(self, mut rcv: Receiver<CalendarCommands>) -> Self {
-        let mut self_clone = self.clone();
+        let self_clone = self.clone();
         info!("Starting worker thread");
         tokio::spawn(async move {
             while let Some(cmd) = rcv.recv().await {

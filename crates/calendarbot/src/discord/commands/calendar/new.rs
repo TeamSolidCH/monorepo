@@ -9,6 +9,7 @@ use crate::events::CalendarCommands;
 use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds::dsl as guilds;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
+use crate::types::TimezoneChoices;
 use crate::ApplicationContext;
 use anyhow::Result;
 use diesel::prelude::*;
@@ -23,18 +24,23 @@ pub async fn new(
     #[channel_types("Text")]
     #[description = "Channel (defaults to the current channel)"]
     channel: Option<serenity::GuildChannel>,
+    #[description = "Timezone (defaults to UTC)"] timezone: TimezoneChoices,
+    #[description = "Number of days to display (defaults to 8)"] num_displayed_days: Option<u8>,
+    #[description = "Skip weekends (default to false)"] skip_weekend: Option<bool>,
+    #[description = "Show days if there are no events (defaults to false)"]
+    show_if_no_events: Option<bool>,
 ) -> Result<()> {
     let channel = match channel {
         Some(c) => c,
         None => ctx.guild_channel().await.unwrap(),
     };
 
-    let mut db = ctx.data().db.get().await.unwrap();
+    let mut db = ctx.data().db.get().await?;
 
     // Checking if the channel as calendar
     let res = guilds_calendars::guilds_calendars
-        .filter(guilds_calendars::channelid.eq(channel.id.get().to_string()))
-        .select(guilds_calendars::channelid)
+        .filter(guilds_calendars::channelId.eq(channel.id.get().to_string()))
+        .select(guilds_calendars::channelId)
         .first::<String>(&mut db)
         .await;
 
@@ -45,7 +51,7 @@ pub async fn new(
 
     // Checking if the calendar is already present in db
     let res = calendars::calendars
-        .filter(calendars::googleid.eq(&calendar_id))
+        .filter(calendars::googleId.eq(&calendar_id))
         .select(calendars::id)
         .first::<i32>(&mut db)
         .await;
@@ -65,9 +71,9 @@ pub async fn new(
             resp: resp_tx,
         };
 
-        ctx.defer().await.unwrap();
+        ctx.defer().await?;
 
-        ctx.data().gcalendar_tx.clone().send(cmd).await.unwrap();
+        ctx.data().gcalendar_tx.clone().send(cmd).await?;
 
         let is_valid = resp_rx.await.unwrap_or(Ok(false)).unwrap_or(false);
 
@@ -82,29 +88,31 @@ pub async fn new(
     let guild_id = ctx.guild_id().unwrap().get().to_string();
 
     let res = guilds::guilds
-        .filter(guilds::discordid.eq(guild_id.clone()))
+        .filter(guilds::discordId.eq(guild_id.clone()))
         .select(guilds::id)
         .first::<i32>(&mut db)
         .await;
 
     let guild_id = match res {
         Ok(id) => id,
-        Err(_) => diesel::insert_into(guilds::guilds)
-            .values(guilds::discordid.eq(guild_id))
-            .returning(guilds::id)
-            .get_result::<i32>(&mut db)
-            .await
-            .expect("Unable to insert guild into database"),
+        Err(_) => {
+            diesel::insert_into(guilds::guilds)
+                .values(guilds::discordId.eq(guild_id))
+                .returning(guilds::id)
+                .get_result::<i32>(&mut db)
+                .await?
+        }
     };
 
     // Inserting calendar into db
     let db_cal_id = match db_cal_id {
-        None => diesel::insert_into(calendars::calendars)
-            .values(calendars::googleid.eq(&calendar_id))
-            .returning(calendars::id)
-            .get_result::<i32>(&mut db)
-            .await
-            .expect("Unable to insert calendar into database"),
+        None => {
+            diesel::insert_into(calendars::calendars)
+                .values(calendars::googleId.eq(&calendar_id))
+                .returning(calendars::id)
+                .get_result::<i32>(&mut db)
+                .await?
+        }
         Some(id) => id,
     };
 
@@ -113,11 +121,14 @@ pub async fn new(
         .values((
             guilds_calendars::guild_id.eq(guild_id),
             guilds_calendars::calendar_id.eq(db_cal_id),
-            guilds_calendars::channelid.eq(channel.id.get().to_string()),
+            guilds_calendars::channelId.eq(channel.id.get().to_string()),
+            guilds_calendars::timezone.eq(timezone.to_normalized_string()),
+            guilds_calendars::nbDisplayedDays.eq(num_displayed_days.unwrap_or(7) as i32),
+            guilds_calendars::skipWeekend.eq(skip_weekend.unwrap_or(false)),
+            guilds_calendars::skipEmptyDays.eq(!show_if_no_events.unwrap_or(true)),
         ))
         .execute(&mut db)
-        .await
-        .expect("Unable to insert guild_calendar into database");
+        .await?;
 
     ctx.send(
         poise::CreateReply::default()

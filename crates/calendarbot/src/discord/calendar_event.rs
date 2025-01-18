@@ -10,16 +10,14 @@ use crate::UpdateCalendarEvent;
 
 use crate::schema::calendars::dsl as calendars;
 use crate::schema::guilds_calendars::dsl as guilds_calendars;
+use crate::types::CalendarEvent;
 use anyhow::Result;
 use diesel::prelude::*;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
-use google_calendar3::api::Event;
-use google_calendar3::chrono::{Datelike, NaiveDate, NaiveTime, Utc};
-use log::{debug, error, warn};
+use log::{debug, error};
 use poise::serenity_prelude as serenity;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 
@@ -82,14 +80,10 @@ impl Discord {
 
                 let cache = cache.as_ref().lock().await.clone().unwrap();
 
-                let embed = match Discord::event_to_embed(event.new_events.clone()) {
-                    Ok(v) => v,
-                    Err(_) => serenity::CreateEmbed::new().title("Events").field(
-                        "Error",
-                        "Error getting events",
-                        true,
-                    ),
-                };
+                let embed = CalendarEvent::to_embed(
+                    event.new_events.clone(),
+                    event.calendar_options.clone(),
+                );
 
                 for (channel_id, message_id) in event.discord_channel_and_message_ids {
                     debug!(target: &channel_id.to_string(), "Handling new_events with message_id: {:?}", message_id);
@@ -106,10 +100,9 @@ impl Discord {
                             error!("Failed to send or edit message: {}, calendar: {}, channel_id: {:?}, message_id: {:?}", e, event.calendar_id, channel_id, message_id);
                         }
                         Ok(msg_id) => {
-                            // We need to update the message_id in the database
                             if Some(msg_id.get()) != message_id {
                                 let db_cal_id = calendars::calendars
-                                    .filter(calendars::googleid.eq(event.calendar_id.clone()))
+                                    .filter(calendars::googleId.eq(event.calendar_id.clone()))
                                     .select(calendars::id)
                                     .first::<i32>(&mut db)
                                     .await
@@ -117,11 +110,11 @@ impl Discord {
 
                                 diesel::update(guilds_calendars::guilds_calendars)
                                     .filter(
-                                        guilds_calendars::channelid
+                                        guilds_calendars::channelId
                                             .eq(channel_id.to_string())
                                             .and(guilds_calendars::calendar_id.eq(db_cal_id)),
                                     )
-                                    .set(guilds_calendars::messageid.eq(msg_id.get().to_string()))
+                                    .set(guilds_calendars::messageId.eq(msg_id.get().to_string()))
                                     .execute(&mut db)
                                     .await
                                     .expect("Unable to update message id in database");
@@ -131,102 +124,5 @@ impl Discord {
                 }
             }
         });
-    }
-
-    fn event_to_embed(events: Vec<Event>) -> Result<serenity::CreateEmbed> {
-        let mut sorted: BTreeMap<(NaiveDate, NaiveDate), Vec<Event>> = BTreeMap::new();
-        let mut fields: Vec<(String, String, bool)> = vec![];
-
-        for ele in events {
-            let ele_clone = ele.clone();
-
-            let start_date = ele_clone.start;
-            let end_date = ele_clone.end;
-
-            if let (None, None) = (start_date.as_ref(), end_date.as_ref()) {
-                warn!(
-                    "Event start date or event end date is None {:?}",
-                    ele.clone()
-                );
-                continue;
-            }
-
-            let start_date = start_date.unwrap().date_time;
-            let end_date = end_date.unwrap().date_time;
-
-            if let (None, None) = (start_date, end_date) {
-                warn!(
-                    "Event start datetime or event end datetime is None {:?}",
-                    ele.clone()
-                );
-                continue;
-            }
-
-            sorted
-                .entry((
-                    start_date.unwrap().date_naive(),
-                    end_date.unwrap().date_naive(),
-                ))
-                .or_default()
-                .push(ele);
-        }
-
-        for ((start_date, end_date), events) in sorted.iter() {
-            let mut field = String::new();
-            for event in events {
-                if event.start.is_none() {
-                    warn!("Event start is None");
-                    continue;
-                };
-
-                if event.end.is_none() {
-                    warn!("Event end is None");
-                    continue;
-                };
-
-                field.push_str(&format!(
-                    "```{} - {} | {}```\n",
-                    event
-                        .start
-                        .clone()
-                        .unwrap()
-                        .date_time
-                        .unwrap_or_else(|| start_date
-                            .clone()
-                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                            .and_utc())
-                        .format("%H:%M"),
-                    event
-                        .end
-                        .clone()
-                        .unwrap()
-                        .date_time
-                        .unwrap_or_else(|| end_date
-                            .clone()
-                            .and_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                            .and_utc())
-                        .format("%H:%M"),
-                    event.summary.clone().unwrap()
-                ));
-            }
-            let mut format = String::from("**%A** - %e %B");
-            if start_date.year() != end_date.year() || start_date.year() != Utc::now().year() {
-                format = String::from("%F");
-            }
-
-            let mut key = start_date.format(&format.clone()).to_string();
-
-            if start_date.format("%F").to_string() != end_date.format("%F").to_string() {
-                key.push_str(
-                    &end_date
-                        .format(format!(" // {}", format.clone()).as_str())
-                        .to_string(),
-                );
-            }
-
-            fields.push((key, field, false));
-        }
-
-        Ok(serenity::CreateEmbed::new().title("Events").fields(fields))
     }
 }
