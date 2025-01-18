@@ -1,3 +1,9 @@
+/*
+Calendarbot  Copyright (C) 2023 Zbinden Yohan
+
+This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+This is free software, and you are welcome to redistribute it
+ */
 use crate::models::GuildCalendar;
 use anyhow::anyhow;
 use chrono_tz::Tz;
