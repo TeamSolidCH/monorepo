@@ -15,9 +15,10 @@ pub mod types;
 use crate::events::UpdateCalendarEvent;
 use crate::gcalendar::GCalendar;
 use anyhow::Error;
+use diesel_async::async_connection_wrapper::AsyncConnectionWrapper;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use events::CalendarCommands;
 use poise::serenity_prelude as serenity;
 use std::env;
@@ -42,7 +43,27 @@ async fn main() {
     env_logger::init();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = get_connection_pool(database_url).await;
+    let pool = get_connection_pool(database_url.clone()).await;
+
+    // Apply migrations
+    let res = tokio::task::spawn_blocking(move || {
+        use diesel::prelude::Connection;
+
+        log::info!("Applying migrations...");
+        let mut conn =
+            AsyncConnectionWrapper::<diesel_async::AsyncPgConnection>::establish(&database_url)?;
+
+        conn.run_pending_migrations(MIGRATIONS)?;
+
+        Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+    })
+    .await;
+
+    if let Err(e) = res {
+        log::error!("Failed to apply migrations: {:?}", e);
+        return;
+    }
+    log::info!("Migrations applied successfully!");
 
     let token = env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN not found");
     let intents = serenity::GatewayIntents::non_privileged();
